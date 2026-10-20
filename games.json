@@ -1,0 +1,53 @@
+{
+  "_readme": "Etingi Games catalog. Add one object per game to 'games'. Fields: id (unique, lowercase), name, tagline, description, icon (path in /icons or full URL), url (where to play), plannedUrl (optional future etingi.com address), category, tags[], accounts ('required' | 'optional' | 'none'), offline (true/false), owner (which bot maintains it), featured (true/false), status ('live' | 'coming-soon'). Keep valid JSON (no trailing commas). See CATALOG.md.",
+  "games": [
+    {
+      "id": "chess-legends",
+      "name": "Chess Legends",
+      "tagline": "3D cinematic chess",
+      "description": "Cinematic 3D chess with dramatic captures, AI opponents and ranked online play against real players.",
+      "icon": "icons/chess-legends.png",
+      "url": "https://chess-legends-online.netlify.app",
+      "plannedUrl": "https://chess.etingi.com",
+      "category": "Strategy",
+      "tags": ["3D", "online", "ranked", "vs computer"],
+      "accounts": "optional",
+      "offline": true,
+      "owner": "Strategy Game Creator",
+      "featured": true,
+      "status": "live"
+    },
+    {
+      "id": "run-n-rumble",
+      "name": "Run N Rumble",
+      "tagline": "Cartoon platformer",
+      "description": "Help Tubby Dash rescue his three friends and escape the video game! 15 levels and 5 bosses. Plays offline as a guest; cloud saves and leaderboards coming.",
+      "icon": "icons/run-n-rumble.png",
+      "url": "https://anthonydalewalker-gif.github.io/run-n-rumble/",
+      "plannedUrl": "",
+      "category": "Platformer",
+      "tags": ["platformer", "bosses", "offline", "PWA"],
+      "accounts": "optional",
+      "offline": true,
+      "owner": "Game App Creator (TODO: confirm final URL / plannedUrl)",
+      "featured": true,
+      "status": "live"
+    },
+    {
+      "id": "tictactoe",
+      "name": "Tic-Tac-Toe",
+      "tagline": "Classic, with online duels",
+      "description": "Play against the computer, pass-and-play with a friend, or challenge someone online.",
+      "icon": "icons/tictactoe.svg",
+      "url": "https://anthonydalewalker-gif.github.io/tictactoe/",
+      "plannedUrl": "",
+      "category": "Classic",
+      "tags": ["classic", "2 player", "online", "vs computer"],
+      "accounts": "none",
+      "offline": true,
+      "owner": "Walker Games",
+      "featured": false,
+      "status": "live"
+    }
+  ]
+}

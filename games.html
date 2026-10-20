@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0d1c"><link rel="icon" href="icons/chess-legends.png"><link rel="stylesheet" href="style.css"><script src="shared/etingi-config.js"></script><script src="shared/etingi-auth.js"></script><title>All games – Etingi Games</title></head><body><script src="site.js"></script>
+<main><h2 class="sec" style="margin-top:32px">All games</h2>
+<div class="filters"><input id="q" type="search" placeholder="Search games…" aria-label="Search games"><div id="cats" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+<div class="grid" id="list"></div><p class="muted" id="empty" hidden>No games match.</p></main>
+<script>
+var all=[],cat='All';function draw(){var q=document.getElementById('q').value.toLowerCase();var g=all.filter(function(x){return (cat==='All'||x.category===cat)&&(x.name+' '+x.description+' '+(x.tags||[]).join(' ')).toLowerCase().indexOf(q)>-1});
+document.getElementById('list').innerHTML=g.map(gameCard).join('');document.getElementById('empty').hidden=g.length>0;
+document.getElementById('cats').innerHTML=['All'].concat(all.map(function(x){return x.category}).filter(function(c,i,a){return c&&a.indexOf(c)===i})).map(function(c){return '<button class="chip'+(c===cat?' on':'')+'" data-c="'+c+'">'+c+'</button>'}).join('');
+document.querySelectorAll('.chip').forEach(function(b){b.onclick=function(){cat=b.dataset.c;draw()}})}
+document.getElementById('q').oninput=draw;loadGames().then(function(g){all=g;draw()}).catch(function(){document.getElementById('list').textContent='Could not load games.json'});
+</script></body></html>

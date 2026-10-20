@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0d1c"><link rel="icon" href="icons/chess-legends.png"><link rel="stylesheet" href="style.css"><script src="shared/etingi-config.js"></script><script src="shared/etingi-auth.js"></script><title>Etingi Games – Play free games with one account</title><meta name="description" content="Etingi Games: free browser games — Chess Legends, Run N Rumble, Tic-Tac-Toe — with one account for all of them."></head><body><script src="site.js"></script>
+<main>
+<section class="hero"><div><h1>Play bold.<br><span class="g">One account,</span><br>every game.</h1><p>Etingi Games is home to cinematic chess, cartoon platforming and classic duels. Free on your phone or computer, no download needed. Make one account and your name follows you into every game.</p>
+<div class="btns"><a class="btn p" href="games.html">🎮 Browse games</a><a class="btn" href="account.html?mode=signup" id="cta">✨ Create free account</a></div></div>
+<div class="stack" id="stack"></div></section>
+<div class="stats"><div><b id="nGames">–</b><span>Games</span></div><div><b>Free</b><span>To play</span></div><div><b>1</b><span>Account for all</span></div></div>
+<h2 class="sec">Featured games <a href="games.html">See all →</a></h2><div class="grid" id="feat"></div>
+<h2 class="sec">Why Etingi</h2>
+<div class="feat"><div><i>🔐</i><h3>One login</h3><p>Sign up once with an email and username, then use it in every Etingi game.</p></div><div><i>📱</i><h3>Phone-first</h3><p>Every game runs in your browser. Many keep working offline, and you can add them to your home screen.</p></div><div><i>🏆</i><h3>Compete</h3><p>Ranked online chess today. Leaderboards and cloud saves for more games are on the way.</p></div></div>
+</main>
+<script>
+EtingiAuth.onChange(function(u){var c=document.getElementById('cta');if(u){c.textContent='👤 My profile';c.href='profile.html'}});
+loadGames().then(function(g){document.getElementById('nGames').textContent=g.length;
+ document.getElementById('feat').innerHTML=g.filter(function(x){return x.featured}).concat(g.filter(function(x){return !x.featured})).slice(0,3).map(gameCard).join('');
+ document.getElementById('stack').innerHTML=g.slice(0,3).map(function(x){return '<div class="t"><img src="'+x.icon+'" alt="'+x.name+'"></div>'}).join('')});
+</script></body></html>

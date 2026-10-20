@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0d1c"><link rel="icon" href="icons/chess-legends.png"><link rel="stylesheet" href="style.css"><script src="shared/etingi-config.js"></script><script src="shared/etingi-auth.js"></script><title>Account – Etingi Games</title><meta name="robots" content="noindex"></head><body><script src="site.js"></script>
+<main><div class="panel" id="auth"></div><p class="muted" style="text-align:center" id="hint"></p></main>
+<script>
+// modes: login | signup | forgot | resend | reset   e.g. account.html?mode=signup
+var mode=new URLSearchParams(location.search).get('mode')||'login',el=document.getElementById('auth');
+var next=new URLSearchParams(location.search).get('next');
+function done(){location.href=(next&&/^\/|^https:\/\/([a-z0-9-]+\.)?etingi\.com\//.test(next))?next:'profile.html'}
+EtingiAuth.init().then(function(){
+  if(mode==='reset'&&!EtingiAuth.user){EtingiAuth.render(el,'forgot',{msg:'Open the reset link from your email to set a new password, or request a new link here.',redirect:location.origin+location.pathname+'?mode=reset'});return}
+  if(EtingiAuth.user&&mode!=='reset'){el.innerHTML='<div class="ea-form"><h2>You\'re logged in</h2><p>Signed in as <b>'+(EtingiAuth.profile?EtingiAuth.profile.username:EtingiAuth.user.email)+'</b>.</p><a class="ea-btn ea-primary" style="text-align:center;text-decoration:none" href="profile.html">Go to my profile</a><a class="ea-btn" style="text-align:center;text-decoration:none" href="games.html">Play a game</a></div>';return}
+  EtingiAuth.render(el,mode,{onDone:done,redirect:location.origin+location.pathname+(mode==='forgot'||mode==='reset'?'?mode=reset':'')});
+}).catch(function(e){el.textContent='Could not reach the account server: '+e.message});
+</script></body></html>
