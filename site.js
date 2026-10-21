@@ -6,7 +6,7 @@
   nav.innerHTML='<a class="logo" href="index.html"><b>🎮</b><span>Etingi <em>Games</em></span></a><nav class="links">'+L.map(function(l){return '<a href="'+l[0]+'"'+(p===l[0]?' class="on"':'')+'>'+l[2]+'</a>'}).join('')+'</nav><div id="account"></div>';
   document.body.prepend(nav);
   var tb=document.createElement('nav');tb.className='tabbar';tb.innerHTML=L.map(function(l){return '<a href="'+l[0]+'"'+(p===l[0]?' class="on"':'')+'><span>'+l[1]+'</span>'+l[2]+'</a>'}).join('');document.addEventListener('DOMContentLoaded',function(){document.body.append(tb);
-  var f=document.createElement('footer');f.innerHTML='© '+new Date().getFullYear()+' Etingi Games · One account for every game · <a href="games.html">All games</a> · <a href="account.html">Account</a>';document.body.append(f);});
+  var f=document.createElement('footer');f.innerHTML='© '+new Date().getFullYear()+' Etingi Games · One account for every game · <a href="games.html">All games</a> · <a href="account.html">Account</a><span class="credit">Created by AD Walker Builds</span>';document.body.append(f);});
   var base=location.pathname.replace(/[^/]*$/,'');
   EtingiAuth.mountMenu('#account',{profileUrl:base+'profile.html',hubUrl:base+'index.html'});
 })();

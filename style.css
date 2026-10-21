@@ -40,3 +40,4 @@ h2.sec{font-size:1.6rem;margin:36px 0 16px;display:flex;justify-content:space-be
 .prof h1{margin:0}.muted{color:var(--muted)}.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:16px 0}.kv div{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}.kv b{display:block;font-size:1.3rem}
 .box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin:14px 0}
 footer{border-top:1px solid var(--border);padding:24px clamp(16px,4vw,48px);color:var(--muted);text-align:center;font-size:.9rem}
+footer .credit{display:block;margin-top:6px;font-size:.78rem;letter-spacing:.04em;opacity:.7}
