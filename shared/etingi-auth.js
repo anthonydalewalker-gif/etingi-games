@@ -69,7 +69,11 @@
 
   // ---- errors ----
   function errText(e) {
-    var m = typeof e === 'string' ? e : [e && e.code, e && e.error, e && e.message].filter(Boolean).join(' ') || String(e || ''); var n = m.replace(/_/g, ' ');
+    var clean = function (v) { if (v == null) return ''; if (typeof v !== 'string') { try { v = v.message || v.msg || JSON.stringify(v); } catch (x) { v = ''; } } v = String(v).trim(); return /^(\{\}|\[\]|null|undefined|\[object Object\])$/.test(v) ? '' : v; };
+    var m = typeof e === 'string' ? clean(e) : [e && e.code, e && e.error_code, e && e.error, e && e.msg, e && e.message].map(clean).filter(Boolean).join(' ');
+    var st = e && typeof e === 'object' ? (e.status || 0) : 0; var n = m.replace(/_/g, ' ');
+    if (!n && st >= 500) return 'Our server couldn\'t finish this right now (it may not be able to send email to that address yet). Please try again later.';
+    if (!n) return 'Something went wrong' + (st ? ' (error ' + st + ')' : '') + '. Please try again.';
     if (/invalid.?credentials|invalid login/i.test(n)) return 'Wrong email/username or password.';
     if (/not confirmed/i.test(n)) return 'Please confirm your email first. Check your inbox (and spam) for the link.';
     if (/already registered|user already exists/i.test(n)) return 'An account with this email already exists. Log in, or use "Forgot password?".';
