@@ -1,10 +1,10 @@
-/*! Etingi Games shared login widget v1 — https://etingi.com/shared/etingi-auth.js
+/*! Etingi Games shared login widget v1 — https://www.etingi.com/shared/etingi-auth.js
  * Classic script (no bundler). Exposes window.EtingiAuth. See WIDGET.md. */
 (function () {
   'use strict';
   var SCRIPT = document.currentScript;
   var BASE = SCRIPT ? SCRIPT.src.replace(/[^/]*$/, '') : '/shared/';
-  var CFG = Object.assign({ storageKey: 'etingi-auth', cookieDomain: '.etingi.com', hubUrl: 'https://etingi.com/' },
+  var CFG = Object.assign({ storageKey: 'etingi-auth', cookieDomain: '.etingi.com', hubUrl: (/(^|\.)etingi\.com$/.test(location.hostname) ? location.origin + '/' : 'https://www.etingi.com/') },
     window.ETINGI_CONFIG || {});
   var state = { sb: null, user: null, profile: null, recovery: false, listeners: [], ready: null };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
