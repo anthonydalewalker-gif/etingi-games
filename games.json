@@ -7,10 +7,14 @@
       "tagline": "3D cinematic chess",
       "description": "Cinematic 3D chess with dramatic captures, AI opponents and ranked online play against real players.",
       "icon": "icons/chess-legends.png",
-      "url": "https://chess-legends-online.netlify.app",
-      "plannedUrl": "https://chess.etingi.com",
+      "url": "/chess/",
       "category": "Strategy",
-      "tags": ["3D", "online", "ranked", "vs computer"],
+      "tags": [
+        "3D",
+        "online",
+        "ranked",
+        "vs computer"
+      ],
       "accounts": "optional",
       "offline": true,
       "owner": "Strategy Game Creator",
@@ -26,7 +30,12 @@
       "url": "https://anthonydalewalker-gif.github.io/run-n-rumble/",
       "plannedUrl": "",
       "category": "Platformer",
-      "tags": ["platformer", "bosses", "offline", "PWA"],
+      "tags": [
+        "platformer",
+        "bosses",
+        "offline",
+        "PWA"
+      ],
       "accounts": "optional",
       "offline": true,
       "owner": "Game App Creator (TODO: confirm final URL / plannedUrl)",
@@ -42,7 +51,12 @@
       "url": "https://anthonydalewalker-gif.github.io/tictactoe/",
       "plannedUrl": "",
       "category": "Classic",
-      "tags": ["classic", "2 player", "online", "vs computer"],
+      "tags": [
+        "classic",
+        "2 player",
+        "online",
+        "vs computer"
+      ],
       "accounts": "none",
       "offline": true,
       "owner": "Walker Games",
