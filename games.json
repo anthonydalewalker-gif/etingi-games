@@ -48,7 +48,7 @@
       "tagline": "Classic, with online duels",
       "description": "Play against the computer, pass-and-play with a friend, or challenge someone online.",
       "icon": "icons/tictactoe.svg",
-      "url": "https://anthonydalewalker-gif.github.io/tictactoe/",
+      "url": "/tictactoe/",
       "plannedUrl": "",
       "category": "Classic",
       "tags": [
@@ -57,7 +57,7 @@
         "online",
         "vs computer"
       ],
-      "accounts": "none",
+      "accounts": "required",
       "offline": true,
       "owner": "Walker Games",
       "featured": false,

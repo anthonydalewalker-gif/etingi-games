@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic‑Tac‑Toe</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --x:#38bdf8; --o:#f472b6; --text:#e2e8f0; --muted:#94a3b8; --line:#334155; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+         padding:16px; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  h1 { margin:0 0 8px; font-size:2.4rem; letter-spacing:1px; }
+  .modes { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:12px 0; }
+  .modes button, .btn { background:var(--card); color:var(--text); border:2px solid var(--line); padding:8px 16px;
+         border-radius:999px; cursor:pointer; font-size:0.95rem; font-family:inherit; }
+  .modes button.active { border-color:var(--x); color:var(--x); }
+  .btn.primary { border-color:var(--x); color:var(--x); font-weight:600; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  #status { font-size:1.3rem; margin:10px 0 16px; min-height:1.6em; text-align:center; }
+  #board { display:grid; grid-template-columns:repeat(3, min(26vw,120px)); gap:10px; }
+  .cell { aspect-ratio:1; background:var(--card); border:none; border-radius:16px; font-size:min(16vw,72px);
+          font-weight:800; cursor:pointer; color:var(--text); transition:transform .1s, background .2s; padding:0; }
+  .cell:hover:not(:disabled) { background:#273449; transform:scale(1.03); }
+  .cell:disabled { cursor:default; }
+  .cell.X { color:var(--x); } .cell.O { color:var(--o); }
+  .cell.win { background:#334155; box-shadow:0 0 0 3px #facc15 inset; }
+  #board.locked .cell:not(.X):not(.O) { opacity:.7; }
+  .scores { display:flex; gap:24px; margin:18px 0; font-size:1rem; }
+  .scores span { text-align:center; }
+  .scores span b { font-size:1.4rem; display:block; text-align:center; }
+  #reset { margin-top:4px; }
+
+  /* Online panel */
+  #online { width:min(92vw,400px); background:var(--card); border:1px solid var(--line); border-radius:16px;
+            padding:14px; margin:4px 0 8px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  #online[hidden], [hidden] { display:none !important; }
+  .pill { display:inline-flex; align-items:center; gap:8px; font-size:.85rem; color:var(--muted);
+          background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:4px 12px; }
+  .pill { max-width:100%; } .pill span { text-align:center; }
+  .pill i { flex:none;  width:9px; height:9px; border-radius:50%; background:#64748b; display:inline-block; }
+  .pill.connecting i, .pill.waiting i { background:#facc15; animation:pulse 1.2s infinite; }
+  .pill.connected i { background:#22c55e; }
+  .pill.error i { background:#ef4444; }
+  @keyframes pulse { 50% { opacity:.3; } }
+  .row { display:flex; gap:8px; width:100%; justify-content:center; }
+  .muted { color:var(--muted); font-size:.85rem; text-align:center; }
+  #codeIn, #linkOut { flex:1; min-width:0; background:var(--bg); color:var(--text); border:2px solid var(--line);
+          border-radius:999px; padding:8px 14px; font-size:1rem; font-family:inherit; }
+  #codeIn { text-transform:uppercase; letter-spacing:3px; text-align:center; max-width:150px; }
+  #linkOut { font-size:.85rem; }
+  #codeOut { font-size:1.8rem; letter-spacing:6px; color:var(--x); font-weight:800; }
+  @media (max-width:420px){ .modes button { padding:8px 12px; font-size:.9rem; } h1 { font-size:2.1rem; } }
+  /* Chat (online only) */
+  #chat { width:min(92vw,400px); margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  #chatHead { width:100%; display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--text);
+              font:600 .95rem system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:10px 14px; cursor:pointer; text-align:left; }
+  #chatHead .chev { margin-left:auto; color:var(--muted); transition:transform .2s; }
+  #chat.collapsed #chatHead .chev { transform:rotate(-90deg); }
+  #chat.collapsed #chatBody { display:none; }
+  #chat.unread { border-color:var(--x); box-shadow:0 0 0 2px rgba(56,189,248,.25); }
+  #chatBadge { background:var(--o); color:#0f172a; border-radius:999px; font-size:.75rem; font-weight:800; padding:1px 7px; }
+  #chatBody { border-top:1px solid var(--line); }
+  #chatLog { height:min(32vh,220px); overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; overscroll-behavior:contain; }
+  .msg { max-width:78%; padding:7px 12px; border-radius:16px; font-size:.95rem; line-height:1.3; white-space:pre-wrap;
+         overflow-wrap:anywhere; color:#0f172a; }
+  .msg.mine { align-self:flex-end; border-bottom-right-radius:4px; }
+  .msg.theirs { align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.X { background:var(--x); } .msg.O { background:var(--o); }
+  .msg.big { font-size:1.6rem; background:transparent; padding:0 4px; }
+  .sys { align-self:center; color:var(--muted); font-size:.78rem; text-align:center; }
+  .reacts { display:flex; gap:6px; padding:0 10px 8px; }
+  .reacts button { flex:1; background:var(--bg); border:1px solid var(--line); border-radius:999px; color:var(--text);
+                   padding:5px 0; font-size:1rem; cursor:pointer; font-family:inherit; }
+  #chatForm { display:flex; gap:8px; padding:0 10px 10px; }
+  #chatIn { flex:1; min-width:0; background:var(--bg); color:var(--text); border:2px solid var(--line); border-radius:999px;
+            padding:8px 14px; font-size:16px; font-family:inherit; }
+  #chatIn:focus { outline:none; border-color:var(--x); }
+  #chat button:disabled, #chatIn:disabled { opacity:.5; cursor:default; }
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#334155; color:var(--text);
+           padding:10px 18px; border-radius:999px; font-size:.95rem; opacity:0; transition:opacity .25s; pointer-events:none; }
+  #toast.show { opacity:1; }
+</style>
+<script src="../shared/etingi-config.js"></script>
+<script src="../shared/etingi-auth.js"></script>
+<script src="../shared/etingi-gate.js"></script>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <div class="modes">
+    <button id="pvp" class="active">2 Players</button>
+    <button id="pvc">vs Computer</button>
+    <button id="pon">Play Online</button>
+  </div>
+
+  <div id="online" hidden>
+    <div id="netStatus" class="pill"><i></i><span>Offline</span></div>
+    <div id="lobby" class="row" style="flex-direction:column;align-items:center;gap:10px">
+      <button id="create" class="btn primary">Create game</button>
+      <div class="muted">or join with a code</div>
+      <form id="joinForm" class="row">
+        <input id="codeIn" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn" type="submit">Join</button>
+      </form>
+    </div>
+    <div id="share" hidden style="width:100%;text-align:center">
+      <div class="muted">Room code</div>
+      <div id="codeOut"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="linkOut" readonly>
+        <button id="copy" class="btn primary">Copy Link</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Send this link to your friend. They'll join as <b style="color:var(--o)">O</b>.</div>
+    </div>
+    <div id="netActions" class="row" hidden>
+      <button id="retry" class="btn" hidden>Reconnect</button>
+      <button id="leave" class="btn">Leave game</button>
+    </div>
+  </div>
+
+  <div id="status">X's turn</div>
+  <div id="board"></div>
+  <div class="scores">
+    <span style="color:var(--x)"><span id="lx">X</span><b id="sx">0</b></span>
+    <span>Draws<b id="sd">0</b></span>
+    <span style="color:var(--o)"><span id="lo">O</span><b id="so">0</b></span>
+  </div>
+  <button id="reset" class="btn">New Game</button>
+  <section id="chat" hidden aria-label="Chat">
+    <button id="chatHead" type="button" aria-expanded="true">💬 Chat <span id="chatBadge" hidden>0</span><span class="chev">▾</span></button>
+    <div id="chatBody">
+      <div id="chatLog" aria-live="polite"></div>
+      <div class="reacts">
+        <button type="button" data-r="👍">👍</button><button type="button" data-r="😂">😂</button>
+        <button type="button" data-r="🔥">🔥</button><button type="button" data-r="GG">GG</button>
+      </div>
+      <form id="chatForm" autocomplete="off">
+        <input id="chatIn" maxlength="200" placeholder="Message…" enterkeyhint="send">
+        <button class="btn primary" type="submit">Send</button>
+      </form>
+    </div>
+  </section>
+  <div id="toast"></div>
+<script>
+  const $=id=>document.getElementById(id);
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const boardEl=$('board'), statusEl=$('status');
+  let mode='pvp'; // 'pvp' | 'cpu' | 'online'
+  let board, turn, over, cpuTimer=null; const score={X:0,O:0,D:0};
+  const cells=[...Array(9)].map((_,i)=>{const b=document.createElement('button');b.className='cell';b.setAttribute('aria-label','Cell '+(i+1));b.onclick=()=>play(i);boardEl.appendChild(b);return b;});
+
+  function winner(b){for(const l of lines){const[a,c,d]=l;if(b[a]&&b[a]===b[c]&&b[a]===b[d])return{p:b[a],l};}return b.every(Boolean)?{p:'D'}:null;}
+  function reset(start){clearTimeout(cpuTimer);board=Array(9).fill(null);turn=start||'X';over=false;render();}
+
+  function render(){
+    const w=winner(board); over=!!w;
+    const myTurn = mode!=='online' || (net.connected && turn===net.me);
+    const locked = over || (mode==='cpu'&&turn==='O') || (mode==='online'&&!myTurn);
+    cells.forEach((c,i)=>{c.textContent=board[i]||'';c.className='cell'+(board[i]?' '+board[i]:'');c.disabled=locked||!!board[i];});
+    boardEl.classList.toggle('locked',locked);
+    if(w&&w.l)w.l.forEach(i=>cells[i].classList.add('win'));
+    statusEl.textContent=statusText(w);
+    $('reset').textContent = (mode==='online'&&over)?'Rematch':'New Game';
+    $('reset').disabled = mode==='online' && !net.connected;
+    renderChatUI();
+  }
+  function statusText(w){
+    if(mode==='online'){
+      if(!net.role) return 'Create a game or join one';
+      if(!net.connected) return net.everConnected ? 'Opponent disconnected' : (net.role==='host'?'Waiting for opponent to join…':'Connecting…');
+      if(w) return w.p==='D' ? "It's a draw!" : (w.p===net.me ? 'You win! 🎉' : 'Opponent wins');
+      return turn===net.me ? `Your turn (${net.me})` : 'Waiting for opponent…';
+    }
+    if(w) return w.p==='D' ? "It's a draw!" : w.p+' wins!';
+    return (mode==='cpu'&&turn==='O') ? 'Computer is thinking…' : turn+"'s turn";
+  }
+
+  function play(i){
+    if(over||board[i])return;
+    if(mode==='cpu'&&turn==='O')return;
+    if(mode==='online'){ if(!net.connected||turn!==net.me)return; onlineMove(i); return; }
+    move(i);
+    if(mode==='cpu'&&!over)cpuTimer=setTimeout(cpu,350);
+  }
+  function move(i){board[i]=turn;const w=winner(board);if(w){score[w.p]++;updScore();}turn=turn==='X'?'O':'X';render();}
+  function updScore(){sx.textContent=score.X;so.textContent=score.O;sd.textContent=score.D;}
+  function minimax(b,p){const w=winner(b);if(w)return{s:w.p==='O'?1:w.p==='X'?-1:0};
+    let best={s:p==='O'?-2:2};
+    b.forEach((v,i)=>{if(v)return;b[i]=p;const r=minimax(b,p==='O'?'X':'O');b[i]=null;
+      if(p==='O'?r.s>best.s:r.s<best.s)best={s:r.s,i};});return best;}
+  function cpu(){if(over||mode!=='cpu')return;let i;
+    // 20% of the time play a random move so it's beatable
+    const free=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+    i=Math.random()<0.2?free[Math.floor(Math.random()*free.length)]:minimax(board.slice(),'O').i;move(i);}
+
+  function setMode(m){
+    if(m===mode)return;
+    if(mode==='online'&&m!=='online')leaveOnline(true);
+    mode=m;
+    pvp.classList.toggle('active',m==='pvp');pvc.classList.toggle('active',m==='cpu');pon.classList.toggle('active',m==='online');
+    $('online').hidden = m!=='online';
+    score.X=score.O=score.D=0;updScore();setLabels();
+    reset();
+  }
+  function setLabels(){
+    const on=mode==='online'&&net.me;
+    $('lx').textContent = on ? (net.me==='X'?'X · You':'X · Them') : 'X';
+    $('lo').textContent = on ? (net.me==='O'?'O · You':'O · Them') : 'O';
+  }
+  pvp.onclick=()=>setMode('pvp');pvc.onclick=()=>setMode('cpu');pon.onclick=()=>setMode('online');
+  $('reset').onclick=()=>{ if(mode==='online') onlineNewGame(); else reset(); };
+
+  /* ---------------- Online (Supabase Realtime: broadcast + presence) ---------------- */
+  // One channel per room: "ttt:<CODE>". Presence tells us who is in the room; broadcast carries moves/chat.
+  // The host (X) is authoritative: it validates every move and broadcasts the full state with a sequence number.
+  const SUPABASE_URL='https://vrfwzpykuisesbbukxrp.supabase.co';
+  const SUPABASE_KEY='sb_publishable_dYQXdCoN8d_zXe3UeMRPDQ_s0ko2Q4C';
+  const CODE_CHARS='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const CONNECT_TIMEOUT=12000;
+  const net={ch:null,role:null,me:null,code:null,round:0,seq:0,connected:false,everConnected:false,
+    id:null,peerId:null,joinTimer:null,retryTimer:null,full:false,welcomed:false};
+  const log=(...a)=>console.log('[ttt]',...a);
+  let sb=null, sbLib=null;
+  function loadSupabase(){
+    if(sb) return Promise.resolve(sb);
+    // On etingi.com reuse the shared Etingi client (same Supabase project) instead of creating a second one.
+    if(window.EtingiAuth) return window.EtingiAuth.init().then(()=>{ if(!window.EtingiAuth.client) throw new Error('no client'); sb=window.EtingiAuth.client; return sb; });
+    if(!sbLib) sbLib=new Promise((res,rej)=>{
+      if(window.supabase) return res();
+      const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      s.onload=()=>res(); s.onerror=()=>{sbLib=null;rej(new Error('load failed'));}; document.head.appendChild(s);
+    }).then(()=>{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false},realtime:{params:{eventsPerSecond:20}}}); return sb; });
+    return sbLib;
+  }
+  function setNet(state,text){ const p=$('netStatus'); p.className='pill '+state; p.querySelector('span').textContent=text; }
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+  function newCode(){ let c=''; const a=new Uint32Array(5); crypto.getRandomValues(a); a.forEach(n=>c+=CODE_CHARS[n%CODE_CHARS.length]); return c; }
+  function newId(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+  function roomLink(code){ return location.origin+location.pathname+'?room='+code; }
+  function send(m){ if(net.ch&&net.ch.state==='joined'){ m.from=net.id; net.ch.send({type:'broadcast',event:'msg',payload:m}).catch(e=>console.warn(e)); } }
+  function showLobby(){ $('lobby').hidden=false; $('share').hidden=true; $('netActions').hidden=true; $('retry').hidden=true; }
+  function startingMark(){ return net.round%2===0 ? 'X' : 'O'; } // alternate who starts each rematch
+
+  async function createGame(){
+    leaveOnline(false);
+    Object.assign(net,{role:'host',me:'X',code:newCode(),id:newId(),round:0,seq:0});
+    setLabels(); reset('X');
+    $('lobby').hidden=true; $('netActions').hidden=false; $('retry').hidden=true;
+    setNet('connecting','Creating room…');
+    openChannel();
+  }
+  async function joinGame(code){
+    code=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(code.length<4){ toast('Enter the room code'); return; }
+    leaveOnline(false);
+    // keep the same id per room in this tab so a reload/rejoin is recognised as the same guest
+    let id=sessionStorage.getItem('ttt-id-'+code); if(!id){ id=newId(); sessionStorage.setItem('ttt-id-'+code,id); }
+    Object.assign(net,{role:'guest',me:'O',code,id,round:0,seq:0});
+    setLabels(); reset('X');
+    $('lobby').hidden=true; $('netActions').hidden=false; $('retry').hidden=true;
+    setNet('connecting','Joining room '+code+'…');
+    openChannel();
+  }
+  async function openChannel(){
+    try{ await loadSupabase(); }catch(e){ return netFail('Could not load the online library. Check your connection.', true); }
+    if(!net.role)return;
+    net.welcomed=false;
+    if(net.ch){ const old=net.ch; net.ch=null; try{ sb.removeChannel(old); }catch(e){} }
+    const ch=sb.channel('ttt:'+net.code,{config:{broadcast:{self:false,ack:false},presence:{key:net.id}}});
+    net.ch=ch;
+    ch.on('broadcast',{event:'msg'},({payload})=>{ if(net.ch===ch) onData(payload); });
+    ch.on('presence',{event:'sync'},()=>{ if(net.ch===ch) onPresence(); });
+    ch.subscribe(async(status)=>{
+      if(net.ch!==ch)return; log('channel',status);
+      if(status==='SUBSCRIBED'){
+        clearTimeout(net.retryTimer);
+        await ch.track({role:net.role,at:Date.now()});
+        if(net.role==='host'){
+          $('codeOut').textContent=net.code; $('linkOut').value=roomLink(net.code);
+          if(!net.connected){ $('share').hidden=false; setNet('waiting','Waiting for opponent…'); }
+        } else if(!net.connected){
+          setNet('connecting','Looking for host…');
+          clearTimeout(net.joinTimer);
+          net.joinTimer=setTimeout(()=>{ if(net.ch===ch&&!net.connected&&!net.full)
+            netFail(net.everConnected?'The host left the game.':`Room ${net.code} not found. Check the code or ask for a new link.`, true); },CONNECT_TIMEOUT);
+        }
+      } else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+        if(status==='CLOSED'&&!net.role)return;
+        setNet('connecting','Reconnecting…');
+        clearTimeout(net.retryTimer);
+        net.retryTimer=setTimeout(()=>{ if(net.ch===ch&&net.role) openChannel(); },2000);
+      }
+    });
+  }
+  // Who's in the room? Decide connected / opponent left / room full.
+  function onPresence(){
+    const st=net.ch.presenceState(); // { key: [ {role,at,...} ] }
+    const people=Object.entries(st).map(([k,v])=>({id:k,role:v[0]&&v[0].role,at:(v[0]&&v[0].at)||0}));
+    const hosts=people.filter(p=>p.role==='host'), guests=people.filter(p=>p.role==='guest').sort((a,b)=>a.at-b.at||(a.id<b.id?-1:1));
+    let opp=null;
+    if(net.role==='host'){
+      if(net.peerId&&guests.some(g=>g.id===net.peerId)) opp=net.peerId;
+      else if(guests.length) opp=guests[0].id;
+      // tell any extra guest the room is full
+      guests.forEach(g=>{ if(g.id!==opp) send({t:'full',to:g.id}); });
+      if(opp&&opp!==net.peerId){ net.peerId=opp; }
+    } else {
+      // guest: the host must be present AND have accepted us (sent us state) before we count as connected
+      if(hosts.length){ if(net.welcomed) opp=hosts[0].id; else send({t:'hello',have:chatLog.filter(m=>m.from!=='sys').length}); }
+      else net.welcomed=false;
+    }
+    const nowConnected=!!opp && !net.full;
+    if(nowConnected&&!net.connected){
+      clearTimeout(net.joinTimer);
+      net.connected=true; const was=net.everConnected; net.everConnected=true;
+      setNet('connected','Connected'); $('retry').hidden=true;
+      if(net.role==='host'){ $('share').hidden=true; sendState(); toast(was?'Opponent reconnected':'Opponent joined!'); sysMsg(was?'Opponent reconnected':'Opponent joined'); }
+      else { toast(was?'Reconnected':'Joined! You are O'); sysMsg(was?'Reconnected to host':'You joined as O'); }
+      render();
+    } else if(!nowConnected&&net.connected){
+      onConnLost();
+    }
+  }
+  function sendState(to){ send({t:'state',to:to||net.peerId,board,turn,score:{...score},round:net.round,seq:net.seq}); }
+  function applyState(m){
+    if(typeof m.seq!=='number'||m.seq<net.seq)return; // stale
+    board=m.board.slice(); turn=m.turn; net.round=m.round; net.seq=m.seq; Object.assign(score,m.score); updScore(); render();
+  }
+  function onData(m){
+    if(!m||typeof m!=='object')return;
+    if(m.to&&m.to!==net.id)return;                         // addressed to someone else
+    if(m.t==='full'){ if(net.role==='guest'&&!net.welcomed){ net.full=true; netFail('That game already has two players.'); } return; }
+    if(net.role==='host'&&net.peerId&&m.from!==net.peerId)return; // ignore anyone but the accepted guest
+    switch(m.t){
+      case 'hello':
+        if(net.role!=='host')break;
+        sendState();
+        if(m.have===0){ const hist=chatLog.filter(x=>x.from!=='sys').slice(-100); if(hist.length) send({t:'chatsync',to:net.peerId,log:hist}); }
+        break;
+      case 'chat': {
+        const text=String(m.text||'').slice(0,CHAT_MAX).trim();
+        if(text) addChat(net.me==='X'?'O':'X', text);
+        break; }
+      case 'chatsync':
+        if(net.role!=='guest'||!Array.isArray(m.log))break;
+        if(chatLog.some(x=>x.from!=='sys'))break;
+        m.log.forEach(x=>{ const t=String(x&&x.text||'').slice(0,CHAT_MAX).trim(); if(t&&(x.from==='X'||x.from==='O')) addChat(x.from,t,true); });
+        sysMsg('Chat history restored');
+        break;
+      case 'state':
+        if(net.role!=='guest')break;
+        if(!net.welcomed){ net.welcomed=true; applyState(m); onPresence(); break; }
+        { const prevRound=net.round; applyState(m); if(net.round>prevRound&&m.board.every(v=>!v)) sysMsg('New game — '+turn+' starts'); }
+        break;
+      case 'move': { // guest -> host
+        if(net.role!=='host')break;
+        const i=m.i;
+        if(m.r!==net.round||m.seq!==net.seq||over||turn!=='O'||!(i>=0&&i<9)||board[i]){ sendState(); break; } // out of sync: resync
+        net.seq++; move(i); sendState(); break; }
+      case 'new': // guest asks for a rematch
+        if(net.role!=='host')break;
+        if(m.r===net.round){ const wasOver=over; hostNewRound(); if(!wasOver) toast('Opponent started a new game'); }
+        else sendState();
+        break;
+      case 'bye': if(net.connected) onConnLost(); break;
+    }
+  }
+  function hostNewRound(){ net.round++; net.seq++; reset(startingMark()); sendState(); sysMsg('New game — '+startingMark()+' starts'); }
+  // called from play() for online moves
+  function onlineMove(i){
+    if(net.role==='host'){ net.seq++; move(i); sendState(); }
+    else { send({t:'move',i,r:net.round,seq:net.seq}); move(i); } // optimistic; host state confirms
+  }
+  function onlineNewGame(){
+    if(!net.connected)return;
+    if(net.role==='host') hostNewRound(); else send({t:'new',r:net.round});
+  }
+  function onConnLost(){
+    net.connected=false;
+    if(net.role==='host'){
+      net.peerId=null;
+      setNet('error','Opponent disconnected — they can rejoin with the link');
+      if(net.code){ $('share').hidden=false; }
+    } else {
+      setNet('error','Host disconnected — waiting for them to come back…'); $('retry').hidden=false;
+    }
+    toast('Opponent disconnected'); sysMsg(net.role==='host'?'Opponent left':'Disconnected from host');
+    render();
+  }
+  function netFail(msg, canRetry){
+    clearTimeout(net.joinTimer); log('FAIL:',msg);
+    net.connected=false;
+    setNet('error',msg);
+    $('netActions').hidden=false;
+    $('retry').hidden=!canRetry;
+    if(net.full||(net.role==='guest'&&!net.everConnected&&!canRetry)){ const ch=net.ch; net.ch=null; try{ ch&&sb.removeChannel(ch); }catch(e){} }
+    render();
+  }
+  function leaveOnline(backToLobby){
+    clearTimeout(net.joinTimer); clearTimeout(net.retryTimer);
+    const ch=net.ch;
+    if(ch){ try{ if(ch.state==='joined') ch.send({type:'broadcast',event:'msg',payload:{t:'bye',from:net.id}}); }catch(e){} net.ch=null;
+      setTimeout(()=>{ try{ ch.untrack(); sb.removeChannel(ch); }catch(e){} },150); }
+    Object.assign(net,{role:null,me:null,code:null,round:0,seq:0,connected:false,everConnected:false,id:null,peerId:null,full:false,welcomed:false});
+    clearChat();
+    setLabels();
+    if(backToLobby!==false){ showLobby(); setNet('','Offline'); }
+    if(backToLobby!==false&&location.search) history.replaceState(null,'',location.pathname);
+  }
+
+  $('create').onclick=()=>createGame();
+  $('joinForm').onsubmit=e=>{ e.preventDefault(); joinGame($('codeIn').value); };
+  $('leave').onclick=()=>{ leaveOnline(true); score.X=score.O=score.D=0; updScore(); reset(); };
+  $('retry').onclick=()=>{ $('retry').hidden=true; net.full=false; setNet('connecting','Reconnecting…'); openChannel(); };
+  // Phones suspend background tabs and the socket drops. When the page comes back, rejoin the channel
+  // (presence re-announces us; the guest's hello pulls the current state from the host).
+  function wakeOnline(){
+    if(mode!=='online'||!net.role||net.full)return;
+    const ch=net.ch;
+    if(!ch||ch.state!=='joined'||(sb&&!sb.realtime.isConnected())){ log('wake: rejoining channel'); setNet('connecting','Reconnecting…'); openChannel(); }
+    else if(net.role==='guest'&&net.connected) send({t:'hello',have:chatLog.filter(m=>m.from!=='sys').length});
+  }
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') wakeOnline(); });
+  addEventListener('online',()=>wakeOnline());
+  addEventListener('pageshow',e=>{ if(e.persisted) wakeOnline(); });
+  const canShare = !!navigator.share && matchMedia('(pointer:coarse)').matches;
+  if(canShare) $('copy').textContent='Share Link';
+  $('copy').onclick=async()=>{
+    const url=$('linkOut').value;
+    if(canShare){ try{ await navigator.share({title:'Tic-Tac-Toe',text:'Play tic-tac-toe with me! Room '+net.code,url}); return; }catch(e){ if(e.name==='AbortError')return; } }
+    try{ await navigator.clipboard.writeText(url); }catch(e){ const i=$('linkOut'); i.select(); try{document.execCommand('copy');}catch(_){} }
+    $('copy').textContent='Copied!'; setTimeout(()=>$('copy').textContent=canShare?'Share Link':'Copy Link',1500); toast('Link copied');
+  };
+  $('linkOut').onclick=e=>e.target.select();
+  addEventListener('pagehide',e=>{ if(!e.persisted&&net.ch&&net.ch.state==='joined'){ try{ send({t:'bye'}); }catch(_){} } });
+
+  /* ---------------- Chat (rides the same Realtime channel) ---------------- */
+  const CHAT_MAX=200, chatEl=$('chat'), chatLogEl=$('chatLog'), chatIn=$('chatIn');
+  let chatLog=[], unread=0;
+  // start collapsed on small phones so the board stays in view
+  let chatOpen = !(innerWidth<480 && innerHeight<900);
+  function renderChatUI(){
+    const show = mode==='online' && net.everConnected;
+    chatEl.hidden=!show;
+    const can = show && net.connected;
+    chatIn.disabled=!can; chatEl.querySelectorAll('#chatForm button, .reacts button').forEach(b=>b.disabled=!can);
+    chatIn.placeholder = can ? 'Message…' : 'Disconnected';
+    chatEl.classList.toggle('collapsed',!chatOpen);
+    $('chatHead').setAttribute('aria-expanded',chatOpen);
+    $('chatBadge').hidden=!unread; $('chatBadge').textContent=unread>9?'9+':unread;
+    chatEl.classList.toggle('unread',unread>0);
+  }
+  function appendChatEl(m){
+    const d=document.createElement('div');
+    if(m.from==='sys'){ d.className='sys'; }
+    else {
+      const mine=m.from===net.me, big=/^(\p{Extended_Pictographic}|\uFE0F|\u200D){1,3}$/u.test(m.text);
+      d.className='msg '+m.from+(mine?' mine':' theirs')+(big?' big':'');
+      d.title=mine?'You':'Opponent';
+    }
+    d.textContent=m.text; // never parsed as HTML
+    chatLogEl.appendChild(d);
+    chatLogEl.scrollTop=chatLogEl.scrollHeight;
+  }
+  function addChat(from,text,quiet){
+    const m={from,text}; chatLog.push(m); if(chatLog.length>300){ chatLog.shift(); chatLogEl.firstChild&&chatLogEl.firstChild.remove(); }
+    appendChatEl(m);
+    if(!quiet&&from!=='sys'&&from!==net.me&&(!chatOpen||chatEl.hidden)){ unread++; toast('💬 '+(text.length>40?text.slice(0,40)+'…':text)); }
+    renderChatUI();
+  }
+  function sysMsg(text){ if(mode==='online') addChat('sys',text,true); }
+  function clearChat(){ chatLog=[]; unread=0; chatLogEl.textContent=''; chatIn.value=''; }
+  function sendChat(text){
+    text=String(text||'').slice(0,CHAT_MAX).trim();
+    if(!text||!net.connected)return false;
+    send({t:'chat',text}); addChat(net.me,text); return true;
+  }
+  $('chatForm').onsubmit=e=>{ e.preventDefault(); if(sendChat(chatIn.value)) chatIn.value=''; chatIn.focus(); };
+  chatEl.querySelectorAll('.reacts button').forEach(b=>b.onclick=()=>sendChat(b.dataset.r));
+  $('chatHead').onclick=()=>{ chatOpen=!chatOpen; if(chatOpen){ unread=0; requestAnimationFrame(()=>chatLogEl.scrollTop=chatLogEl.scrollHeight); } renderChatUI(); };
+
+  reset();
+  // Opening a shared link (?room=CODE) auto-joins as O
+  const roomParam=new URLSearchParams(location.search).get('room');
+  if(roomParam){ setMode('online'); $('codeIn').value=roomParam.toUpperCase(); joinGame(roomParam); }
+</script>
+</body>
+</html>
