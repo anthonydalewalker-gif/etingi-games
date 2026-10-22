@@ -18,14 +18,15 @@
     if (!g) { g = document.createElement('div'); g.id = 'eg-gate'; document.body.appendChild(g); }
     return g;
   }
-  function show(html) { var put = function () { gate().innerHTML = html; wire(); }; document.body ? put() : document.addEventListener('DOMContentLoaded', put); }
+  var latest = null, waiting = false;
+  function show(html) { latest = html; var put = function () { if (latest == null) return; gate().innerHTML = latest; wire(); }; if (document.body) put(); else if (!waiting) { waiting = true; document.addEventListener('DOMContentLoaded', put); } }
   var name = document.title.split(/[–:|-]/)[0].trim() || 'this game';
   function wire() {
     var g = document.getElementById('eg-gate'); if (!g) return;
     g.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { EtingiAuth.open(b.dataset.m, { redirect: location.href, onDone: function () { setTimeout(function () { location.reload(); }, 500); } }); }; });
   }
   show('<div class="c ld">Checking your Etingi account…</div>');
-  function unlock() { document.documentElement.classList.remove('eg-locked'); var g = document.getElementById('eg-gate'); if (g) g.remove(); }
+  function unlock() { document.documentElement.classList.remove('eg-locked'); latest = null; var g = document.getElementById('eg-gate'); if (g) g.remove(); }
   function lock() {
     document.documentElement.classList.add('eg-locked');
     show('<div class="c"><div style="font-size:48px">🔐</div><h1>Sign in to play</h1><p>' + name.replace(/[<>&]/g, '') + ' is part of Etingi Games. Log in or create a free account to play. One account works in every game.</p>' +
