@@ -7,12 +7,14 @@ var Q=new URLSearchParams(location.search),mode=Q.get('mode')||'login',el=docume
 function safe(u){try{var x=new URL(u,location.href);return (x.origin===location.origin||/^https:\/\/([a-z0-9-]+\.)?etingi\.com$/.test(x.origin))?x.href:null}catch(e){return null}}
 var next=safe(Q.get('next')||''),ret=safe(Q.get('return')||'');
 function done(){location.href=next||'profile.html'}
-function back(){var t=ret||'index.html';setTimeout(function(){location.href=t},1200)}
+function back(){var t=ret||'index.html';try{var u=new URL(t,location.href);u.hash='';['mode','type','access_token','refresh_token'].forEach(function(k){u.searchParams.delete(k)});t=u.href}catch(e){}history.replaceState(null,'',location.pathname);setTimeout(function(){location.replace(t)},1200)}
 EtingiAuth.init().then(function(){
   if(mode==='reset'){
     document.title='Choose a new password – Etingi Games';
     var where=ret?'You\'ll go back to your game afterwards.':'You\'ll go to Etingi Games afterwards.';
     if(EtingiAuth.linkType==='error'){EtingiAuth.render(el,'forgot',{msg:'That reset link didn\'t work ('+EtingiAuth.linkError+'). Links expire and work only once. Request a new one below.',returnTo:ret||undefined});return}
+    var fresh=(EtingiAuth.linkType==='recovery'||EtingiAuth.recovery)&&!EtingiAuth.recoveryDone;
+    if(EtingiAuth.user&&!fresh){el.innerHTML='<div class="ea-form"><h2>✅ You\'re signed in</h2><p>Your password is set. To change it again, use “Forgot password?” to get a new reset email.</p><a class="ea-btn ea-primary" style="text-align:center;text-decoration:none" href="'+(ret||'index.html').replace(/"/g,'&quot;')+'">Continue</a></div>';return}
     if(!EtingiAuth.user){EtingiAuth.render(el,'forgot',{msg:'Open the reset link from your email to set a new password, or request a new link here.',returnTo:ret||undefined});return}
     EtingiAuth.render(el,'reset',{msg:where,onDone:back});return}
   if(EtingiAuth.user){el.innerHTML='<div class="ea-form"><h2>You\'re logged in</h2><p>Signed in as <b>'+(EtingiAuth.profile?EtingiAuth.profile.username:EtingiAuth.user.email)+'</b>.</p><a class="ea-btn ea-primary" style="text-align:center;text-decoration:none" href="profile.html">Go to my profile</a><a class="ea-btn" style="text-align:center;text-decoration:none" href="games.html">Play a game</a></div>';return}

@@ -1,4 +1,4 @@
-/*! Etingi Games shared login widget v1.1 — https://www.etingi.com/shared/etingi-auth.js
+/*! Etingi Games shared login widget v1.2 — https://www.etingi.com/shared/etingi-auth.js
  * Classic script (no bundler). Exposes window.EtingiAuth. See WIDGET.md. */
 (function () {
   'use strict';
@@ -13,6 +13,18 @@
   var HP = new URLSearchParams(location.hash.replace(/^#/, '')), QP = new URLSearchParams(location.search);
   var LINK = HP.get('access_token') ? (HP.get('type') || 'link') : (HP.get('error_description') || QP.get('error_description')) ? 'error' : null;
   var LINKERR = HP.get('error_description') || QP.get('error_description') || '';
+
+  // ---- password-reset completion marker (stops a second "choose a new password" prompt) ----
+  var RDONE = 'etingi.pwreset.done';
+  function recoveryDone() { try { var t = +(sessionStorage.getItem(RDONE) || localStorage.getItem(RDONE) || 0); return t > 0 && Date.now() - t < 3600e3; } catch (e) { return false; } }
+  function markRecoveryDone() {
+    state.recovery = false;
+    try { sessionStorage.setItem(RDONE, String(Date.now())); localStorage.setItem(RDONE, String(Date.now())); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} // drop #access_token…&type=recovery
+    if (useCookie) state.last = cookieStorage.getItem(CFG.storageKey); // session refresh after the save must not trigger a reload
+  }
+  // A fresh recovery link starts a new reset, so forget an old marker.
+  if (LINK === 'recovery') { try { sessionStorage.removeItem(RDONE); localStorage.removeItem(RDONE); } catch (e) {} }
 
   // ---- dedicated password-reset page (always a clean hub page, never a game) ----
   function resetBase() {
@@ -60,7 +72,7 @@
         storageKey: CFG.storageKey, storage: useCookie ? cookieStorage : window.localStorage } });
       state.sb.auth.onAuthStateChange(function (ev, s) {
         var prev = state.user && state.user.id; state.user = s ? s.user : null;
-        if (ev === 'PASSWORD_RECOVERY') { state.recovery = true; if (!onResetPage()) setTimeout(function () { open('reset'); }, 0); }
+        if (ev === 'PASSWORD_RECOVERY' && LINK === 'recovery' && !recoveryDone()) { state.recovery = true; if (!onResetPage()) setTimeout(function () { open('reset'); }, 0); }
         if ((state.user && state.user.id) !== prev) loadProfile().then(emit, emit);
       });
       var d = await state.sb.auth.getSession(); state.user = d.data.session ? d.data.session.user : null;
@@ -68,7 +80,7 @@
       emit();
       if (LINK) setTimeout(handleLink, 0);
       // pick up logins/logouts made in other tabs or sibling subdomains
-      if (useCookie) { var last = cookieStorage.getItem(CFG.storageKey); document.addEventListener('visibilitychange', function () { if (document.visibilityState !== 'visible') return; var now = cookieStorage.getItem(CFG.storageKey); if (now !== last) { last = now; location.reload(); } }); }
+      if (useCookie) { state.last = cookieStorage.getItem(CFG.storageKey); document.addEventListener('visibilitychange', function () { if (document.visibilityState !== 'visible') return; var now = cookieStorage.getItem(CFG.storageKey); if (now !== state.last) { state.last = now; location.reload(); } }); }
       return api;
     })();
     return state.ready;
@@ -78,7 +90,7 @@
     history.replaceState(null, '', location.pathname + location.search.replace(/[?&]error[^&]*/g, ''));
     if (LINK === 'error' && onResetPage()) return;
     if (LINK === 'error') return open('login', { msg: 'That email link didn\'t work: ' + LINKERR + '. Links expire and work once; request a new one.' });
-    if (LINK === 'recovery' || state.recovery) return onResetPage() ? null : open('reset');
+    if ((LINK === 'recovery' || state.recovery) && !recoveryDone()) return onResetPage() ? null : open('reset');
     if (state.user) toast(LINK === 'signup' ? '✅ Email confirmed. Welcome to Etingi Games!' : '✅ You\'re logged in.');
   }
 
@@ -170,7 +182,7 @@
           var np = v('p'); if (np.length < 8) throw 'Password must be at least 8 characters.'; if (np !== v('p2')) throw 'The passwords don\'t match.';
           msg('Saving…'); var up = await sb.auth.updateUser({ password: np });
           if (up.error) throw (/session|jwt|missing/i.test(up.error.message) ? 'This reset link has expired or you aren\'t signed in via a reset link. Request a new one from "Forgot password?".' : errText(up.error));
-          state.recovery = false; msg('🔑 Password updated. You\'re logged in.'); if (o.onDone) o.onDone(); return;
+          markRecoveryDone(); msg('🔑 Password updated. You\'re logged in.'); if (o.onDone) o.onDone(); return;
         }
       } catch (ex) { go.disabled = false; msg(typeof ex === 'string' ? ex : errText(ex)); }
     };
@@ -214,7 +226,7 @@
   }
 
   var api = {
-    version: '1.1.0', resetUrl: resetUrl, get recovery() { return state.recovery; }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
+    version: '1.2.0', resetUrl: resetUrl, get recovery() { return state.recovery && !recoveryDone(); }, get recoveryDone() { return recoveryDone(); }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
     open: open, close: close, render: render, toast: toast, errText: errText,
     get client() { return state.sb; }, get user() { return state.user; }, get profile() { return state.profile; },
     reloadProfile: function () { return loadProfile().then(function (p) { emit(); return p; }); },
