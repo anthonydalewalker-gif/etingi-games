@@ -25,9 +25,9 @@
       "id": "run-n-rumble",
       "name": "Run N Rumble",
       "tagline": "Cartoon platformer",
-      "description": "Help Tubby Dash rescue his three friends and escape the video game! 15 levels and 5 bosses. Plays offline as a guest; cloud saves and leaderboards coming.",
+      "description": "Help Tubby Dash rescue his three friends and escape the video game! 15 levels and 5 bosses. Free Etingi account required to play.",
       "icon": "icons/run-n-rumble.png",
-      "url": "https://anthonydalewalker-gif.github.io/run-n-rumble/",
+      "url": "/run-n-rumble/",
       "plannedUrl": "",
       "category": "Platformer",
       "tags": [
@@ -36,9 +36,9 @@
         "offline",
         "PWA"
       ],
-      "accounts": "optional",
+      "accounts": "required",
       "offline": true,
-      "owner": "Game App Creator (TODO: confirm final URL / plannedUrl)",
+      "owner": "Game App Creator",
       "featured": true,
       "status": "live"
     },
