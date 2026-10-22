@@ -1,4 +1,4 @@
-/*! Etingi Games shared login widget v1 — https://www.etingi.com/shared/etingi-auth.js
+/*! Etingi Games shared login widget v1.1 — https://www.etingi.com/shared/etingi-auth.js
  * Classic script (no bundler). Exposes window.EtingiAuth. See WIDGET.md. */
 (function () {
   'use strict';
@@ -13,6 +13,20 @@
   var HP = new URLSearchParams(location.hash.replace(/^#/, '')), QP = new URLSearchParams(location.search);
   var LINK = HP.get('access_token') ? (HP.get('type') || 'link') : (HP.get('error_description') || QP.get('error_description')) ? 'error' : null;
   var LINKERR = HP.get('error_description') || QP.get('error_description') || '';
+
+  // ---- dedicated password-reset page (always a clean hub page, never a game) ----
+  function resetBase() {
+    if (CFG.resetUrl) return CFG.resetUrl;
+    var u = BASE.replace(/shared\/$/, '') + 'account.html';
+    return u.replace(/^https:\/\/etingi\.com\//, 'https://www.etingi.com/');
+  }
+  function resetUrl(ret) { return resetBase() + '?mode=reset' + (ret ? '&return=' + encodeURIComponent(ret) : ''); }
+  function onResetPage() { var r = resetBase().split('?')[0].replace(/\.html$/, ''); var h = (location.origin + location.pathname).replace(/\.html$/, ''); return h.replace('://etingi.com', '://www.etingi.com') === r && /[?&]mode=reset\b/.test(location.search); }
+  // A recovery link that landed on a game page (old emails, server-sent links): move it to the reset page, keeping the tokens.
+  if (LINK === 'recovery' && !onResetPage()) {
+    try { location.replace(resetUrl(location.origin + location.pathname) + location.hash); } catch (e) {}
+    return;
+  }
 
   // ---- storage: chunked cookie on .etingi.com when served from etingi.com, else localStorage ----
   var useCookie = CFG.cookieDomain && location.hostname.replace(/^\./, '').endsWith(CFG.cookieDomain.replace(/^\./, ''));
@@ -46,7 +60,7 @@
         storageKey: CFG.storageKey, storage: useCookie ? cookieStorage : window.localStorage } });
       state.sb.auth.onAuthStateChange(function (ev, s) {
         var prev = state.user && state.user.id; state.user = s ? s.user : null;
-        if (ev === 'PASSWORD_RECOVERY') { state.recovery = true; setTimeout(function () { open('reset'); }, 0); }
+        if (ev === 'PASSWORD_RECOVERY') { state.recovery = true; if (!onResetPage()) setTimeout(function () { open('reset'); }, 0); }
         if ((state.user && state.user.id) !== prev) loadProfile().then(emit, emit);
       });
       var d = await state.sb.auth.getSession(); state.user = d.data.session ? d.data.session.user : null;
@@ -62,8 +76,9 @@
 
   function handleLink() {
     history.replaceState(null, '', location.pathname + location.search.replace(/[?&]error[^&]*/g, ''));
+    if (LINK === 'error' && onResetPage()) return;
     if (LINK === 'error') return open('login', { msg: 'That email link didn\'t work: ' + LINKERR + '. Links expire and work once; request a new one.' });
-    if (LINK === 'recovery' || state.recovery) return open('reset');
+    if (LINK === 'recovery' || state.recovery) return onResetPage() ? null : open('reset');
     if (state.user) toast(LINK === 'signup' ? '✅ Email confirmed. Welcome to Etingi Games!' : '✅ You\'re logged in.');
   }
 
@@ -141,8 +156,8 @@
         }
         if (F) {
           var fid = v('id'); if (!fid) throw 'Enter your email or username.'; msg('Sending…');
-          if (fid.indexOf('@') > -1) { if (!emailOk(fid)) throw 'Please enter a valid email address.'; var rr = await sb.auth.resetPasswordForEmail(fid, { redirectTo: redirect }); if (rr.error) err = rr.error.code || rr.error.message; }
-          else { var ri = await invoke('account', { action: 'reset', identifier: fid }); if (ri.error) err = ri.error; }
+          if (fid.indexOf('@') > -1) { if (!emailOk(fid)) throw 'Please enter a valid email address.'; var rr = await sb.auth.resetPasswordForEmail(fid, { redirectTo: resetUrl(o.returnTo || o.redirect || here()) }); if (rr.error) err = rr.error.code || rr.error.message; }
+          else { var ri = await invoke('account', { action: 'reset', identifier: fid, redirectTo: resetUrl(o.returnTo || o.redirect || here()) }); if (ri.error) err = ri.error; }
           if (err && !/user.?not.?found/i.test(err)) throw errText(err);
           return render(el, 'sent', Object.assign({}, o, { kind: 'reset', email: fid.indexOf('@') > -1 ? fid : '' }));
         }
@@ -199,7 +214,7 @@
   }
 
   var api = {
-    version: '1.0.0', init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
+    version: '1.1.0', resetUrl: resetUrl, get recovery() { return state.recovery; }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
     open: open, close: close, render: render, toast: toast, errText: errText,
     get client() { return state.sb; }, get user() { return state.user; }, get profile() { return state.profile; },
     reloadProfile: function () { return loadProfile().then(function (p) { emit(); return p; }); },

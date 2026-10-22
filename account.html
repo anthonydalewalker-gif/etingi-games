@@ -2,12 +2,20 @@
 <main><div class="panel" id="auth"></div><p class="muted" style="text-align:center" id="hint"></p></main>
 <script>
 // modes: login | signup | forgot | resend | reset   e.g. account.html?mode=signup
-var mode=new URLSearchParams(location.search).get('mode')||'login',el=document.getElementById('auth');
-var next=new URLSearchParams(location.search).get('next');
-function done(){location.href=(next&&/^\/|^https:\/\/([a-z0-9-]+\.)?etingi\.com\//.test(next))?next:'profile.html'}
+// reset: landing page for password-reset email links. ?return=<game URL> sends the player back afterwards.
+var Q=new URLSearchParams(location.search),mode=Q.get('mode')||'login',el=document.getElementById('auth');
+function safe(u){try{var x=new URL(u,location.href);return (x.origin===location.origin||/^https:\/\/([a-z0-9-]+\.)?etingi\.com$/.test(x.origin))?x.href:null}catch(e){return null}}
+var next=safe(Q.get('next')||''),ret=safe(Q.get('return')||'');
+function done(){location.href=next||'profile.html'}
+function back(){var t=ret||'index.html';setTimeout(function(){location.href=t},1200)}
 EtingiAuth.init().then(function(){
-  if(mode==='reset'&&!EtingiAuth.user){EtingiAuth.render(el,'forgot',{msg:'Open the reset link from your email to set a new password, or request a new link here.',redirect:location.origin+location.pathname+'?mode=reset'});return}
-  if(EtingiAuth.user&&mode!=='reset'){el.innerHTML='<div class="ea-form"><h2>You\'re logged in</h2><p>Signed in as <b>'+(EtingiAuth.profile?EtingiAuth.profile.username:EtingiAuth.user.email)+'</b>.</p><a class="ea-btn ea-primary" style="text-align:center;text-decoration:none" href="profile.html">Go to my profile</a><a class="ea-btn" style="text-align:center;text-decoration:none" href="games.html">Play a game</a></div>';return}
-  EtingiAuth.render(el,mode,{onDone:done,redirect:location.origin+location.pathname+(mode==='forgot'||mode==='reset'?'?mode=reset':'')});
+  if(mode==='reset'){
+    document.title='Choose a new password – Etingi Games';
+    var where=ret?'You\'ll go back to your game afterwards.':'You\'ll go to Etingi Games afterwards.';
+    if(EtingiAuth.linkType==='error'){EtingiAuth.render(el,'forgot',{msg:'That reset link didn\'t work ('+EtingiAuth.linkError+'). Links expire and work only once. Request a new one below.',returnTo:ret||undefined});return}
+    if(!EtingiAuth.user){EtingiAuth.render(el,'forgot',{msg:'Open the reset link from your email to set a new password, or request a new link here.',returnTo:ret||undefined});return}
+    EtingiAuth.render(el,'reset',{msg:where,onDone:back});return}
+  if(EtingiAuth.user){el.innerHTML='<div class="ea-form"><h2>You\'re logged in</h2><p>Signed in as <b>'+(EtingiAuth.profile?EtingiAuth.profile.username:EtingiAuth.user.email)+'</b>.</p><a class="ea-btn ea-primary" style="text-align:center;text-decoration:none" href="profile.html">Go to my profile</a><a class="ea-btn" style="text-align:center;text-decoration:none" href="games.html">Play a game</a></div>';return}
+  EtingiAuth.render(el,mode,{onDone:done,returnTo:ret||undefined});
 }).catch(function(e){el.textContent='Could not reach the account server: '+e.message});
 </script></body></html>
