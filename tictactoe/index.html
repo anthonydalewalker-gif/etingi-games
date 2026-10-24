@@ -83,9 +83,9 @@
 </style>
 <script src="../shared/etingi-config.js"></script>
 <script src="../shared/etingi-auth.js"></script>
-<script src="../shared/etingi-gate.js"></script>
 </head>
 <body>
+  <div id="account" style="position:absolute;top:10px;right:10px;z-index:5"></div>
   <h1>Tic-Tac-Toe</h1>
   <div class="modes">
     <button id="pvp" class="active">2 Players</button>
@@ -182,7 +182,7 @@
     move(i);
     if(mode==='cpu'&&!over)cpuTimer=setTimeout(cpu,350);
   }
-  function move(i){board[i]=turn;const w=winner(board);if(w){score[w.p]++;updScore();}turn=turn==='X'?'O':'X';render();}
+  function move(i){board[i]=turn;const w=winner(board);if(w){score[w.p]++;updScore();recordResult(w.p);}turn=turn==='X'?'O':'X';render();}
   function updScore(){sx.textContent=score.X;so.textContent=score.O;sd.textContent=score.D;}
   function minimax(b,p){const w=winner(b);if(w)return{s:w.p==='O'?1:w.p==='X'?-1:0};
     let best={s:p==='O'?-2:2};
@@ -224,12 +224,19 @@
   function loadSupabase(){
     if(sb) return Promise.resolve(sb);
     // On etingi.com reuse the shared Etingi client (same Supabase project) instead of creating a second one.
-    if(window.EtingiAuth) return window.EtingiAuth.init().then(()=>{ if(!window.EtingiAuth.client) throw new Error('no client'); sb=window.EtingiAuth.client; return sb; });
+    // Guests have no session; Realtime broadcast/presence on public channels works with the anon key either way.
+    // If the shared widget can't start, fall back to our own anon-key client below.
+    if(window.EtingiAuth) return window.EtingiAuth.init().then(()=>{ if(!window.EtingiAuth.client) throw new Error('no client'); sb=window.EtingiAuth.client; return sb; })
+      .catch(e=>{ log('shared client unavailable, using anon key',e); return ownClient(); });
+    return ownClient();
+  }
+  function ownClient(){
+    if(sb) return Promise.resolve(sb);
     if(!sbLib) sbLib=new Promise((res,rej)=>{
       if(window.supabase) return res();
       const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
       s.onload=()=>res(); s.onerror=()=>{sbLib=null;rej(new Error('load failed'));}; document.head.appendChild(s);
-    }).then(()=>{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false},realtime:{params:{eventsPerSecond:20}}}); return sb; });
+    }).then(()=>{ sb=window.supabase.createClient((window.ETINGI_CONFIG&&ETINGI_CONFIG.supabaseUrl)||SUPABASE_URL,(window.ETINGI_CONFIG&&ETINGI_CONFIG.supabaseAnonKey)||SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false},realtime:{params:{eventsPerSecond:20}}}); return sb; });
     return sbLib;
   }
   function setNet(state,text){ const p=$('netStatus'); p.className='pill '+state; p.querySelector('span').textContent=text; }
@@ -478,6 +485,28 @@
   $('chatForm').onsubmit=e=>{ e.preventDefault(); if(sendChat(chatIn.value)) chatIn.value=''; chatIn.focus(); };
   chatEl.querySelectorAll('.reacts button').forEach(b=>b.onclick=()=>sendChat(b.dataset.r));
   $('chatHead').onclick=()=>{ chatOpen=!chatOpen; if(chatOpen){ unread=0; requestAnimationFrame(()=>chatLogEl.scrollTop=chatLogEl.scrollHeight); } renderChatUI(); };
+
+  /* ---------------- Stats (always on this device; account is optional) ---------------- */
+  // No shared progress table exists in Supabase yet, so stats stay on the device. Signed-in players get the
+  // same device save; syncToCloud() is the single place to add a cloud write once a table exists.
+  const STATS_KEY='ttt-stats';
+  function loadStats(){ try{ return Object.assign({win:0,loss:0,draw:0},JSON.parse(localStorage.getItem(STATS_KEY)||'{}')); }catch(e){ return {win:0,loss:0,draw:0}; } }
+  function saveStats(s){ s.updated=Date.now(); try{ localStorage.setItem(STATS_KEY,JSON.stringify(s)); }catch(e){} }
+  const EA=window.EtingiAuth;
+  function isGuest(){ if(!EA) return true; if(typeof EA.isGuest==='function') return EA.isGuest(); return !EA.user; }
+  async function syncToCloud(){ if(isGuest()) return; /* no suitable table yet: device-only */ }
+  async function recordResult(p){
+    let me=null; if(mode==='cpu') me='X'; else if(mode==='online') me=net.me; else return; // pass-and-play isn't tracked
+    if(!me) return;
+    const s=loadStats(); const r=p==='D'?'draw':(p===me?'win':'loss'); s[r]++; saveStats(s);
+    syncToCloud();
+    if(r==='win'&&EA&&typeof EA.promptSave==='function'){ try{ await EA.promptSave({id:'tictactoe'}); }catch(e){} }
+  }
+  if(EA){
+    try{ EA.mountMenu('#account',{guestLabel:'Sign in to save'}); }catch(e){ console.warn(e); }
+    const sub=typeof EA.onAuthChange==='function'?EA.onAuthChange:EA.onChange;
+    try{ sub.call(EA,u=>{ if(u) syncToCloud(); }); }catch(e){}
+  }
 
   reset();
   // Opening a shared link (?room=CODE) auto-joins as O

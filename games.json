@@ -57,7 +57,7 @@
         "online",
         "vs computer"
       ],
-      "accounts": "required",
+      "accounts": "optional",
       "offline": true,
       "owner": "Walker Games",
       "featured": false,
