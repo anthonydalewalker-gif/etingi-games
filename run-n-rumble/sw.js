@@ -1,12 +1,15 @@
 // Offline cache for Run N Rumble. Bump VERSION when files change.
-const VERSION = 'rnr-etingi-v2';
+const VERSION = 'rnr-etingi-v3';
 const CORE = [
   './', './index.html', './manifest.webmanifest',
   './js/analytics.js', './js/audio.js', './js/input.js', './js/draw.js', './js/art.js', './js/friends.js', './js/art2.js', './js/levels.js', './js/game.js',
   './audio/music.json', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
 ];
+const SHARED = ['../shared/etingi-config.js', '../shared/etingi-auth.js', '../shared/etingi-auth.css', '../shared/supabase.js'];
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE).then(() =>
+    // shared Etingi account widget: best effort, so the game still opens offline (menu just shows sign-in)
+    Promise.all(SHARED.map(u => c.add(u).catch(() => {}))))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));

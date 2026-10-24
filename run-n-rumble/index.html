@@ -28,8 +28,6 @@
 <meta name="apple-mobile-web-app-title" content="Run N Rumble">
 <script src="../shared/etingi-config.js"></script>
 <script src="../shared/etingi-auth.js"></script>
-<script>/* Etingi guest play (WIDGET.md v1.3): play freely; signing in only saves progress. */
-(function(){var shown=false;window.etingiSavePrompt=function(){if(shown||!window.EtingiAuth)return;shown=true;setTimeout(function(){EtingiAuth.promptSave({id:'run-n-rumble',text:'💾 Playing as guest. Sign in to save your progress.',timeout:20000}).catch(function(){});},1200);};if(window.EtingiAuth)EtingiAuth.ready.catch(function(){});})();</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
@@ -64,10 +62,16 @@
     #rotate { display: flex; }
   }
   body.force-rotate #rotate { display: flex; }
+  /* Etingi account menu: small, top-left, only on the title and pause screens so it never covers touch controls */
+  #account { position: fixed; z-index: 5; top: max(8px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
+    display: none; touch-action: manipulation; --ea-font: "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; }
+  .ea-overlay, .ea-overlay input { -webkit-user-select: text; user-select: text; touch-action: auto; }
+  body[data-state="title"] #account, body[data-state="paused"] #account { display: block; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="account"></div>
 <div id="rotate">
   <div class="phone"></div>
   <h1>Turn your phone sideways</h1>

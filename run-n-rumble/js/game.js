@@ -60,7 +60,54 @@
   }
   function maxUnlocked() { let m = 0; for (let i = 1; i < window.LEVELS.length; i++) if (isUnlocked(i)) m = i; return m; }
   function nextStage() { const n = window.LEVELS.length; for (let i = 0; i < n; i++) if (isUnlocked(i) && !isDone(i)) return i; return Math.min(save.lastNode | 0, n - 1); }
-  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} Cloud.push(); }
+  // ---------- optional Etingi account: device save always, cloud copy (table rnr_saves) when signed in ----------
+  function mergeSave(a, b) {   // keep the furthest progress of both
+    const out = Object.assign({}, a, b);
+    out.high = Math.max(a.high | 0, b.high | 0);
+    out.beaten = !!(a.beaten || b.beaten); out.storySeen = !!(a.storySeen || b.storySeen);
+    out.lastNode = Math.max(a.lastNode | 0, b.lastNode | 0);
+    const n = {}, an = a.nodes || {}, bn = b.nodes || {};
+    for (const k of new Set([...Object.keys(an), ...Object.keys(bn)])) {
+      const x = an[k] || { stars: 0, best: 0 }, y = bn[k] || { stars: 0, best: 0 };
+      n[k] = { stars: Math.max(x.stars | 0, y.stars | 0), best: Math.max(x.best | 0, y.best | 0) };
+    }
+    out.nodes = n; out.best = Object.assign({}, a.best, b.best);
+    return out;
+  }
+  const Cloud = (() => {
+    const EA = window.EtingiAuth;
+    const isGuest = () => !EA ? true : (typeof EA.isGuest === 'function' ? EA.isGuest() : !EA.user);
+    let uid = null, timer = 0;
+    async function write() {
+      if (!uid || isGuest() || !EA.client) return;
+      try {
+        const { error } = await EA.client.from('rnr_saves').upsert({ user_id: uid, data: save, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        if (error) console.warn('cloud save', error.message);
+      } catch (e) { console.warn('cloud save', e); }
+    }
+    function push() { if (!uid || isGuest()) return; clearTimeout(timer); timer = setTimeout(write, 800); }
+    async function pullMerge() {   // on sign-in / load: merge cloud + device, then write the result both places
+      if (!uid || !EA.client) return;
+      try {
+        const { data, error } = await EA.client.from('rnr_saves').select('data').eq('user_id', uid).maybeSingle();
+        if (error) { console.warn('cloud load', error.message); return; }
+        save = mergeSave(save, (data && data.data) || {});
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+        await write();
+      } catch (e) { console.warn('cloud load', e); }
+    }
+    function prompt() {   // non-blocking nudge for guests after a clear / victory
+      if (!EA || typeof EA.promptSave !== 'function' || !isGuest()) return;
+      setTimeout(async () => { try { await EA.promptSave({ id: 'run-n-rumble', text: '💾 Playing as guest. Sign in to save your progress.', timeout: 20000 }); } catch (e) {} }, 1200);
+    }
+    if (EA) {
+      try { EA.mountMenu('#account', { guestLabel: 'Sign in to save' }); } catch (e) { console.warn(e); }
+      const sub = typeof EA.onAuthChange === 'function' ? EA.onAuthChange : EA.onChange;
+      try { sub.call(EA, u => { const id = u && u.id || null; if (id && id !== uid) { uid = id; pullMerge(); } else if (!id) uid = null; }); } catch (e) { console.warn(e); }
+    }
+    return { push, prompt };
+  })();
 
   // ---------- game state ----------
   const G = {
@@ -70,12 +117,14 @@
   };
   let W = null;   // current world
   let P = null;   // player
+  document.body.dataset.state = G.state;
 
   function setState(s) {
     // Entering gameplay: ignore any finger that was already down (e.g. the one that tapped PLAY/RETRY).
     if ((s === 'intro' || s === 'play') && ['title', 'levels', 'paused', 'gameover', 'complete', 'victory', 'cutscene', 'runoff', 'story', 'mapwalk'].includes(G.state)) Input.ignoreBefore = performance.now();
     if (window.Stats && s !== G.state) { if (s === 'gameover') Stats.gameOver(G.levelIdx); else if (s === 'victory') Stats.victory(); }
     G.state = s; G.stateT = 0;
+    document.body.dataset.state = s;   // shows the #account menu only on title / pause
   }
   const rand = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -1072,8 +1121,7 @@
     save.nodes[id] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, pts) };
     save.lastNode = Math.min(window.LEVELS.length - 1, G.levelIdx + 1);
 
-    persist();
-    if (window.etingiSavePrompt) window.etingiSavePrompt(); // level cleared: offer sign-in to save (guests only)
+    persist(); Cloud.prompt();
     G.result = { levelPts, timeLeft, bonus, total: G.score, newHigh, stars };
     setState('winning');
   }
@@ -1292,7 +1340,7 @@
   }
   function endCutscene() {
     G.mapSel = G.mapPos = Math.min(G.cut * 3, window.LEVELS.length - 1);
-    if (G.cut >= 5) { save.beaten = true; persist(); G.confetti = []; setState('victory'); Sound.playMusic('victory'); }
+    if (G.cut >= 5) { save.beaten = true; persist(); Cloud.prompt(); G.confetti = []; setState('victory'); Sound.playMusic('victory'); }
     else { G.levelStartScore = G.score; startLevel(G.cut * 3, true); }
   }
   function stepWorld(dt) {

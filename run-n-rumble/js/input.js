@@ -86,8 +86,12 @@
     prevTouchBorn.clear();
     for (const [id, b] of born) prevTouchBorn.set(id, b);
   }
+  function isUiTarget(t) {   // Etingi account menu / sign-in modal: let the browser handle those touches normally
+    return !!(t && t.closest && t.closest('#account, .ea-modal, .ea-overlay, [class^="ea-"], [class*=" ea-"]'));
+  }
   function onTouch(e) {
     Input.touchUsed = true;
+    if (isUiTarget(e.target)) { syncFromTouches({ touches: Array.from(e.touches || []).filter(t => !isUiTarget(t.target)) }); return; }
     syncFromTouches(e);
     if (e.type === 'touchend') unlockAudio();     // iOS unlocks audio in touchend
     if (e.type === 'touchstart') unlockAudio();
@@ -120,6 +124,7 @@
 
   const UI_KEYS = { Enter: 'enter', Escape: 'pause', KeyP: 'pause', KeyM: 'mute', Backspace: 'back', ArrowLeft: 'left', ArrowRight: 'right', Space: 'enter' };
   window.addEventListener('keydown', e => {
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, .ea-overlay, #account')) return;   // typing in the sign-in form
     unlockAudio();
     if (!e.repeat && UI_KEYS[e.code]) Input.keyTaps.push(UI_KEYS[e.code]);
     keys[e.code] = true;
