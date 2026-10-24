@@ -1073,6 +1073,7 @@
     save.lastNode = Math.min(window.LEVELS.length - 1, G.levelIdx + 1);
 
     persist();
+    if (window.etingiSavePrompt) window.etingiSavePrompt(); // level cleared: offer sign-in to save (guests only)
     G.result = { levelPts, timeLeft, bonus, total: G.score, newHigh, stars };
     setState('winning');
   }

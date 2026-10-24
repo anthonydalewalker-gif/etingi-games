@@ -17,11 +17,27 @@ One drop-in script gives any game the Etingi sign-in / user menu, backed by Supa
 </script>
 ```
 Until etingi.com is live, use the preview/hub URL or copy the 4 files into your game (relative paths work).
-Guest/offline play: don't call `requireLogin()` at startup; the widget never blocks a game. If the network is down, `init()` rejects and the menu just shows "Log in".
+Guest/offline play: see the guest section below; the widget never blocks a game. If the network is down, `init()` rejects and the menu just shows "Log in".
+
+## Guest play + optional sign-in (v1.3, Oct 24 2026: A.D's rule)
+Every Etingi game is **free to play as a guest**. Sign-in is optional and only saves progress. **Do not include `etingi-gate.js`** (deprecated) and do not call `requireLogin()` at startup.
+```js
+await EtingiAuth.ready;                    // same as init(); resolves even for guests
+EtingiAuth.isGuest()                       // true when nobody is signed in
+EtingiAuth.onAuthChange(u => { ... })      // alias of onChange: null (guest) or user; fires on sign-in/out
+// Soft, non-blocking prompt (bottom bar: "Sign in" / "Create free account" / "Not now"). Never covers the game.
+const user = await EtingiAuth.promptSave({ id: 'my-game', text: '💾 Sign in to save your progress.' });
+// -> user object if they signed in, null if they chose "Not now" (remembered for this tab session per id; pass force:true to show anyway)
+EtingiAuth.mountMenu('#account', { guestLabel: 'Sign in to save' })  // guest button label (default "Sign in")
+EtingiAuth.getBetaEmails() / await EtingiAuth.setBetaEmails(true|false)  // beta-games email opt-in (signed-in users)
+```
+Pattern for saving: always save locally (localStorage) for guests; when `!isGuest()`, also save to your Supabase table (RLS on `auth.uid()`). Call `promptSave()` at a natural moment (after a win, level end), not on load. On `onAuthChange(user)` merge the local guest save into the cloud save.
+
+Beta-email opt-in is stored in Supabase auth `user_metadata` (`beta_emails` boolean, `beta_emails_at` / `beta_emails_off_at` ISO timestamps). It is set from the unchecked-by-default box on signup and the toggle on profile.html.
 
 ## API
 `init(opts?)` · `mountMenu(el, {profileUrl, hubUrl})` · `onChange(fn)` → unsubscribe · `requireLogin()` → user · `signOut()` ·
-`open(mode)` modes `login|signup|forgot|resend|reset` · `render(el, mode, {onDone, redirect})` (inline form) · `client` · `user` · `profile` · `reloadProfile()` · `toast(text)`.
+`isGuest()` · `onAuthChange(fn)` · `promptSave(opts)` · `getBetaEmails()` · `setBetaEmails(bool)` · `ready` · `open(mode)` modes `login|signup|forgot|resend|reset` · `render(el, mode, {onDone, redirect})` (inline form) · `client` · `user` · `profile` · `reloadProfile()` · `toast(text)`.
 Restyle with CSS variables `--ea-bg --ea-fg --ea-muted --ea-accent --ea-accent2 --ea-field --ea-border --ea-radius --ea-font`.
 
 Login accepts email (signInWithPassword) or username (existing `account` edge function, action `login`). Signup = email + username

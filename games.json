@@ -36,7 +36,7 @@
         "offline",
         "PWA"
       ],
-      "accounts": "required",
+      "accounts": "optional",
       "offline": true,
       "owner": "Game App Creator",
       "featured": true,

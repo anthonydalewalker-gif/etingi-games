@@ -158,7 +158,8 @@ body.cine .cbar{height:9vh}body.cine #tools,body.cine #side,body.cine #banner{op
 </style>
 <script src="../shared/etingi-config.js"></script>
 <script src="../shared/etingi-auth.js"></script>
-<script src="../shared/etingi-gate.js"></script>
+<script>/* Etingi guest play (WIDGET.md v1.3): play freely; signing in only saves progress. */
+(function(){var shown=false;window.etingiSavePrompt=function(){if(shown||!window.EtingiAuth)return;shown=true;setTimeout(function(){EtingiAuth.promptSave({id:'chess-legends',text:'💾 Playing as guest. Sign in to save your rating and progress.',timeout:20000}).catch(function(){});},1200);};if(window.EtingiAuth)EtingiAuth.ready.catch(function(){});})();</script>
 <script src="config.js"></script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/controls/OrbitControls.js":"./vendor/OrbitControls.js","three/addons/utils/BufferGeometryUtils.js":"./vendor/BufferGeometryUtils.js","chess.js":"./vendor/chess.js"}}</script>
 </head><body>
@@ -1045,7 +1046,7 @@ function startGame(cfg){if(cfg.type!=='online')olCleanup();closeModal();clearInt
  buildPieces();dirty3D=false;applyView();render();moveCam(topPos(),topLook(),1.2);setTimeout(maybeAI,1300);
  if(session.ai&&(cfg.type==='ai'||cfg.type==='fun')){const sid=session.id;setTimeout(()=>{if(session&&session.id===sid)say(session.ai.level,'start');},900);}}
 function banner(html){const b=$('banner');b.innerHTML=html;b.classList.remove('hidden');}
-function endGame(winner,reason){gameActive=false;clearSel();$('thinking').classList.add('hidden');const t=session.type;let coins=0,lines=[];
+function endGame(winner,reason){gameActive=false;if(window.etingiSavePrompt)window.etingiSavePrompt();clearSel();$('thinking').classList.add('hidden');const t=session.type;let coins=0,lines=[];
  const vsAI=session.ai&&(t==='ai'||t==='fun');const human=vsAI?other(session.ai.color):null;let title;
  if(vsAI){const res=winner==='draw'?.5:winner===human?1:0;const bot=BOT[session.ai.level];const E=1/(1+Math.pow(10,(bot.rating-S.elo)/400));const d=Math.round(32*(res-E));S.elo=Math.max(100,S.elo+d);
   lines.push(`Rating: ${S.elo} (${d>=0?'+':''}${d}) — ${tierOf(S.elo)[2]} ${tierOf(S.elo)[1]} tier`);coins=res===1?Math.round(bot.rating/20):res===.5?10:5;

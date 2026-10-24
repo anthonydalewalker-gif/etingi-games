@@ -1,4 +1,4 @@
-/*! Etingi Games shared login widget v1.2 — https://www.etingi.com/shared/etingi-auth.js
+/*! Etingi Games shared login widget v1.3 (guest play + optional sign-in) — https://www.etingi.com/shared/etingi-auth.js
  * Classic script (no bundler). Exposes window.EtingiAuth. See WIDGET.md. */
 (function () {
   'use strict';
@@ -130,7 +130,7 @@
       el.innerHTML = '<form class="ea-form" novalidate><h2>' + title + '</h2>' +
         ((L || S) ? '<div class="ea-tabs"><button type="button" class="' + (L ? 'on' : '') + '" data-go="login">Log in</button><button type="button" class="' + (S ? 'on' : '') + '" data-go="signup">New account</button></div>' : '') +
         (L ? '<label>Email or username<input name="id" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="254" value="' + esc(o.id) + '"></label><label>Password<input name="p" type="password" autocomplete="current-password"></label>' : '') +
-        (S ? '<label>Email<input name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com"></label><label>Username <small>(shown to other players)</small><input name="u" autocomplete="nickname" maxlength="16" autocapitalize="off" spellcheck="false" placeholder="3–16 letters, numbers, _"></label><label>Password<input name="p" type="password" autocomplete="new-password" placeholder="at least 8 characters"></label><label>Repeat password<input name="p2" type="password" autocomplete="new-password"></label>' : '') +
+        (S ? '<label>Email<input name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com"></label><label>Username <small>(shown to other players)</small><input name="u" autocomplete="nickname" maxlength="16" autocapitalize="off" spellcheck="false" placeholder="3–16 letters, numbers, _"></label><label>Password<input name="p" type="password" autocomplete="new-password" placeholder="at least 8 characters"></label><label>Repeat password<input name="p2" type="password" autocomplete="new-password"></label><label class="ea-check"><input name="beta" type="checkbox"> <span>Email me about new beta games. Optional. We\'ll only use your email for this, and you can turn it off anytime on your profile.</span></label>' : '') +
         (F ? '<p>Enter your email or username and we\'ll email you a reset link.</p><label>Email or username<input name="id" autocomplete="username" autocapitalize="off" spellcheck="false" value="' + esc(o.id) + '"></label>' : '') +
         (RS ? '<p>Enter the email you signed up with.</p><label>Email<input name="email" type="email" autocomplete="email" value="' + esc(o.email) + '"></label>' : '') +
         (R ? '<label>New password<input name="p" type="password" autocomplete="new-password" placeholder="at least 8 characters"></label><label>Repeat new password<input name="p2" type="password" autocomplete="new-password"></label>' : '') +
@@ -161,7 +161,8 @@
           if (p1.length < 8) throw 'Password must be at least 8 characters.'; if (p1 !== v('p2')) throw 'The passwords don\'t match.';
           msg('Creating account…');
           var av = await sb.rpc('username_available', { p_username: u }); if (av.error) throw errText(av.error); if (!av.data) throw 'That username is taken. Try another.';
-          var su = await sb.auth.signUp({ email: em, password: p1, options: { data: { username: u }, emailRedirectTo: redirect } }); if (su.error) throw errText(su.error);
+          var beta = !!(form.querySelector('[name=beta]') || {}).checked, md = { username: u, beta_emails: beta }; if (beta) md.beta_emails_at = new Date().toISOString();
+          var su = await sb.auth.signUp({ email: em, password: p1, options: { data: md, emailRedirectTo: redirect } }); if (su.error) throw errText(su.error);
           if (su.data.user && Array.isArray(su.data.user.identities) && su.data.user.identities.length === 0) throw 'An account with this email already exists. Log in, or use "Forgot password?".';
           if (su.data.session) { if (o.onDone) o.onDone(); return; }
           return render(el, 'sent', Object.assign({}, o, { kind: 'confirm', email: em }));
@@ -208,7 +209,7 @@
     o = o || {}; var el = typeof target === 'string' ? document.querySelector(target) : target; if (!el) return;
     css(); el.classList.add('ea-menu');
     function draw(u) {
-      if (!u) { el.innerHTML = '<button class="ea-btn ea-primary ea-sm" data-a="in">Log in</button>'; el.querySelector('[data-a=in]').onclick = function () { open('login'); }; return; }
+      if (!u) { el.innerHTML = '<button class="ea-btn ea-primary ea-sm" data-a="in">' + esc(o.guestLabel || 'Sign in') + '</button>'; el.querySelector('[data-a=in]').onclick = function () { open('login'); }; return; }
       var name = (u.profile && (u.profile.display_name || u.profile.username)) || (u.email || '').split('@')[0];
       el.innerHTML = '<button class="ea-chip" aria-haspopup="true"><span class="ea-av">' + (u.profile && u.profile.avatar_url ? '<img src="' + esc(u.profile.avatar_url) + '" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc(name.slice(0, 1).toUpperCase())) + '</span><span class="ea-nm">' + esc(name) + '</span> ▾</button><div class="ea-dd" hidden><div class="ea-dd-h">Signed in as<br><b>' + esc(name) + '</b></div><a href="' + esc(o.profileUrl || CFG.hubUrl + 'profile.html') + '">👤 Profile</a><a href="' + esc(o.hubUrl || CFG.hubUrl) + '">🎮 All games</a><button data-a="out">🚪 Log out</button></div>';
       var dd = el.querySelector('.ea-dd');
@@ -225,8 +226,41 @@
     return new Promise(function (res, rej) { open('login', { onDone: function () { setTimeout(function () { res(Object.assign({}, state.user, { profile: state.profile })); }, 300); }, onCancel: function () { rej(new Error('login cancelled')); } }); });
   }
 
+  // ---- guest play + soft (non-blocking) sign-in prompt ----
+  function isGuest() { return !state.user; }
+  function cur() { return state.user ? Object.assign({}, state.user, { profile: state.profile }) : null; }
+  var bar;
+  function promptSave(o) {
+    o = o || {}; css();
+    return init().then(function () {
+      if (state.user) return cur();
+      var key = 'etingi-soft-prompt-' + (o.id || 'default');
+      if (!o.force) { try { if (sessionStorage.getItem(key)) return null; } catch (e) {} }
+      return new Promise(function (res) {
+        if (bar) bar.remove();
+        bar = document.createElement('div'); bar.className = 'ea-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Save your progress');
+        bar.innerHTML = '<span>' + esc(o.text || '💾 Playing as guest. Sign in to save your progress.') + '</span><button class="ea-btn ea-primary ea-sm" data-a="in">Sign in</button><button class="ea-btn ea-sm" data-a="up">Create free account</button><button class="ea-x2" data-a="no" aria-label="Not now">Not now</button>';
+        document.body.appendChild(bar);
+        var fin = function (v) { if (bar) { bar.remove(); bar = null; } res(v); };
+        var go = function (m) { open(m, { redirect: o.redirect || location.href, onDone: function () { setTimeout(function () { fin(cur()); }, 300); } }); };
+        bar.querySelector('[data-a=in]').onclick = function () { go('login'); };
+        bar.querySelector('[data-a=up]').onclick = function () { go('signup'); };
+        bar.querySelector('[data-a=no]').onclick = function () { try { sessionStorage.setItem(key, '1'); } catch (e) {} fin(null); };
+        if (o.timeout) setTimeout(function () { if (bar) fin(null); }, o.timeout);
+      });
+    }).catch(function () { return null; });
+  }
+  // beta-games email opt-in, stored in Supabase auth user_metadata (owner-writable, no schema change)
+  function betaEmails() { return !!(state.user && state.user.user_metadata && state.user.user_metadata.beta_emails === true); }
+  async function setBetaEmails(on) {
+    await init(); if (!state.user) throw new Error('Not signed in');
+    var d = { beta_emails: !!on }; d[on ? 'beta_emails_at' : 'beta_emails_off_at'] = new Date().toISOString();
+    var r = await state.sb.auth.updateUser({ data: d }); if (r.error) throw r.error; state.user = r.data.user; emit(); return !!on;
+  }
+
   var api = {
-    version: '1.2.0', resetUrl: resetUrl, get recovery() { return state.recovery && !recoveryDone(); }, get recoveryDone() { return recoveryDone(); }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
+    isGuest: isGuest, onAuthChange: onChange, promptSave: promptSave, getBetaEmails: betaEmails, setBetaEmails: setBetaEmails, get ready() { return init(); },
+    version: '1.3.0', resetUrl: resetUrl, get recovery() { return state.recovery && !recoveryDone(); }, get recoveryDone() { return recoveryDone(); }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
     open: open, close: close, render: render, toast: toast, errText: errText,
     get client() { return state.sb; }, get user() { return state.user; }, get profile() { return state.profile; },
     reloadProfile: function () { return loadProfile().then(function (p) { emit(); return p; }); },
