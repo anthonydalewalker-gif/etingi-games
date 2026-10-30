@@ -1,4 +1,4 @@
-# Etingi shared login widget (v1)
+# Etingi shared login widget (v1.4)
 
 One drop-in script gives any game the Etingi sign-in / user menu, backed by Supabase project `vrfwzpykuisesbbukxrp`
 (same accounts as Chess Legends). Files: `shared/etingi-config.js`, `shared/etingi-auth.js`, `shared/etingi-auth.css`, `shared/supabase.js` (supabase-js v2 UMD, loaded automatically if `window.supabase` is missing).
@@ -35,8 +35,31 @@ Pattern for saving: always save locally (localStorage) for guests; when `!isGues
 
 Beta-email opt-in is stored in Supabase auth `user_metadata` (`beta_emails` boolean, `beta_emails_at` / `beta_emails_off_at` ISO timestamps). It is set from the unchecked-by-default box on signup and the toggle on profile.html.
 
+## "← All Games" back button (v1.4, Oct 27 2026)
+On every **game** page that loads the widget, a small fixed pill appears (top-left by default) linking to `https://www.etingi.com/games.html`. It is **not** shown on hub pages (`index`, `games`, `account`, `profile`). Colors match the Etingi logo (cyan → orange). Safe-area padding is included for notched iPhones.
+
+```html
+<!-- default: auto on game pages -->
+<script src="../shared/etingi-auth.js"></script>
+
+<!-- opt out -->
+<script src="../shared/etingi-auth.js" data-etingi-back="off"></script>
+<!-- or on <html>/<body>: data-etingi-back="off" -->
+
+<!-- mount into your own element (unfixed) -->
+<script src="../shared/etingi-auth.js" data-etingi-back="#my-back-slot"></script>
+```
+```js
+EtingiAuth.mountBack()            // force the default fixed pill
+EtingiAuth.mountBack('#slot')     // put the link inside an element you own
+EtingiAuth.mountBack(false)       // remove / disable
+EtingiAuth.gamesUrl()             // hub games list URL
+```
+Built-in placement tweaks: **Run N Rumble** sits just under its top-left account chip (icons already own top-right); **Chess** uses a slightly tighter top-left pill so it sits in the safe corner beside the HUD topbar. Override with `mountBack(el)` or `data-etingi-back` if you need a different spot.
+
+
 ## API
-`init(opts?)` · `mountMenu(el, {profileUrl, hubUrl})` · `onChange(fn)` → unsubscribe · `requireLogin()` → user · `signOut()` ·
+`init(opts?)` · `mountMenu(el, {profileUrl, hubUrl})` · `mountBack(el|false)` · `gamesUrl()` · `onChange(fn)` → unsubscribe · `requireLogin()` → user · `signOut()` ·
 `isGuest()` · `onAuthChange(fn)` · `promptSave(opts)` · `getBetaEmails()` · `setBetaEmails(bool)` · `ready` · `open(mode)` modes `login|signup|forgot|resend|reset` · `render(el, mode, {onDone, redirect})` (inline form) · `client` · `user` · `profile` · `reloadProfile()` · `toast(text)`.
 Restyle with CSS variables `--ea-bg --ea-fg --ea-muted --ea-accent --ea-accent2 --ea-field --ea-border --ea-radius --ea-font`.
 

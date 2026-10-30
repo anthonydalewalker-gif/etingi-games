@@ -1,4 +1,4 @@
-/*! Etingi Games shared login widget v1.3 (guest play + optional sign-in) — https://www.etingi.com/shared/etingi-auth.js
+/*! Etingi Games shared login widget v1.4 (guest play + All Games back button) — https://www.etingi.com/shared/etingi-auth.js
  * Classic script (no bundler). Exposes window.EtingiAuth. See WIDGET.md. */
 (function () {
   'use strict';
@@ -258,13 +258,95 @@
     var r = await state.sb.auth.updateUser({ data: d }); if (r.error) throw r.error; state.user = r.data.user; emit(); return !!on;
   }
 
+  // ---- "← All Games" back button (v1.4): auto on game pages, opt-out / reposition per game ----
+  var backEl = null;
+  function gamesUrl() { return (CFG.hubUrl || 'https://www.etingi.com/').replace(/\/?$/, '/') + 'games.html'; }
+  function isHubPage() {
+    var p = (location.pathname || '/').replace(/\/+$/, '') || '/';
+    var base = p.split('/').pop() || '';
+    if (p === '/' || p === '') return true;
+    if (/^(index|games|account|profile)(\.html)?$/i.test(base) && p.split('/').filter(Boolean).length <= 1) return true;
+    // local hub preview: /site/index.html etc.
+    if (/\/(index|games|account|profile)(\.html)?$/i.test(p) && !/\/(chess|run-n-rumble|tictactoe|games)\//i.test(p)) {
+      var segs = p.split('/').filter(Boolean);
+      if (segs.length <= 2) return true;
+    }
+    return false;
+  }
+  function backAttr() {
+    var s = SCRIPT && SCRIPT.getAttribute && SCRIPT.getAttribute('data-etingi-back');
+    if (s == null || s === '') {
+      try { s = document.documentElement.getAttribute('data-etingi-back') || document.body && document.body.getAttribute('data-etingi-back'); } catch (e) { s = null; }
+    }
+    return s == null ? '' : String(s).trim();
+  }
+  function removeBack() { if (backEl && backEl.parentNode) backEl.parentNode.removeChild(backEl); backEl = null; }
+  function buildBack(href) {
+    css();
+    var a = document.createElement('a');
+    a.className = 'ea-back';
+    a.href = href || gamesUrl();
+    a.setAttribute('aria-label', 'Back to all games');
+    a.innerHTML = '<span class="ea-back-arrow" aria-hidden="true">←</span><span class="ea-back-label">All Games</span>';
+    return a;
+  }
+  function placeFixed(el) {
+    el.classList.add('ea-back-fixed');
+    // Run N Rumble parks #account top-left on title/pause, and icons sit top-right — sit just under the account chip.
+    if (/\/run-n-rumble(\/|$)/i.test(location.pathname)) el.classList.add('ea-back-rnr');
+    // Chess HUD topbar spans the top on phones; nudge slightly so the pill sits in the safe corner.
+    if (/\/chess(\/|$)/i.test(location.pathname)) el.classList.add('ea-back-chess');
+    document.body.appendChild(el);
+  }
+  function mountBack(target) {
+    css();
+    if (target === false || target === null || target === 'off' || target === 'false' || target === '0') {
+      removeBack(); return null;
+    }
+    removeBack();
+    var href = gamesUrl();
+    if (target === undefined || target === true || target === 'auto') {
+      backEl = buildBack(href);
+      placeFixed(backEl);
+      return backEl;
+    }
+    var el = typeof target === 'string' ? document.querySelector(target) : target;
+    if (!el) return null;
+    // If they pass a container, put the link inside it (unfixed).
+    if (el.tagName && el.tagName.toLowerCase() === 'a' && el.classList.contains('ea-back')) {
+      backEl = el; return backEl;
+    }
+    backEl = buildBack(href);
+    backEl.classList.remove('ea-back-fixed', 'ea-back-tr', 'ea-back-rnr', 'ea-back-chess');
+    el.appendChild(backEl);
+    return backEl;
+  }
+  function autoBack() {
+    var attr = backAttr().toLowerCase();
+    if (attr === 'off' || attr === 'false' || attr === '0' || attr === 'no') return;
+    if (isHubPage()) return;
+    if (attr && attr !== 'on' && attr !== 'auto' && attr !== 'true' && attr !== 'yes') {
+      // treat as selector
+      if (document.querySelector(attr)) return mountBack(attr);
+    }
+    mountBack('auto');
+  }
+  // mount after DOM is ready so body exists and data-etingi-back on <body> is readable
+  function scheduleAutoBack() {
+    var go = function () { try { autoBack(); } catch (e) { console.error(e); } };
+    if (document.body) go();
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else setTimeout(go, 0);
+  }
+  scheduleAutoBack();
+
   var api = {
     isGuest: isGuest, onAuthChange: onChange, promptSave: promptSave, getBetaEmails: betaEmails, setBetaEmails: setBetaEmails, get ready() { return init(); },
-    version: '1.3.0', resetUrl: resetUrl, get recovery() { return state.recovery && !recoveryDone(); }, get recoveryDone() { return recoveryDone(); }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
+    version: '1.4.0', resetUrl: resetUrl, get recovery() { return state.recovery && !recoveryDone(); }, get recoveryDone() { return recoveryDone(); }, linkType: LINK, linkError: LINKERR, init: init, mountMenu: mountMenu, mountBack: mountBack, onChange: onChange, requireLogin: requireLogin, signOut: signOut,
     open: open, close: close, render: render, toast: toast, errText: errText,
     get client() { return state.sb; }, get user() { return state.user; }, get profile() { return state.profile; },
     reloadProfile: function () { return loadProfile().then(function (p) { emit(); return p; }); },
-    get usesSharedCookie() { return !!useCookie; }, config: CFG
+    get usesSharedCookie() { return !!useCookie; }, config: CFG, gamesUrl: gamesUrl
   };
   window.EtingiAuth = api;
 })();
