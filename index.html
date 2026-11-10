@@ -13,7 +13,11 @@
 <style>
 html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:calc(env(safe-area-inset-top) + 56px) 20px calc(env(safe-area-inset-bottom) + 32px);box-sizing:border-box;text-align:center}
-picture{display:block;width:min(100%,720px)}.logo{width:100%;height:auto;display:block}
+.hero{position:relative;display:block;width:min(100%,720px);aspect-ratio:752/416;background:#000;overflow:hidden}
+.hero .intro,.hero .logo-static,.hero .logo-static img{width:100%;height:100%;display:block;object-fit:cover;background:#000;border:0;vertical-align:top}
+.hero .logo-static{display:none;position:absolute;inset:0}
+.hero.is-static .intro{display:none}
+.hero.is-static .logo-static{display:block}
 .play{display:inline-block;padding:18px 54px;border-radius:999px;font-size:1.45rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-decoration:none;
 background:linear-gradient(90deg,#00c8ff,#ff7a1a);box-shadow:-10px 0 28px rgba(0,200,255,.55),10px 0 28px rgba(255,122,26,.55);transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
 .play:hover,.play:focus-visible{transform:scale(1.05);box-shadow:-14px 0 40px rgba(0,200,255,.8),14px 0 40px rgba(255,122,26,.8);outline:none}
@@ -21,13 +25,44 @@ background:linear-gradient(90deg,#00c8ff,#ff7a1a);box-shadow:-10px 0 28px rgba(0
 .note{margin:0;color:#9aa3b2;font-size:.92rem}
 #acct{position:fixed;top:calc(env(safe-area-inset-top) + 12px);right:14px;z-index:10}
 @media (min-width:900px){.play{font-size:1.7rem;padding:22px 72px}}
+@media (prefers-reduced-motion: reduce){
+  .hero .intro{display:none}
+  .hero .logo-static{display:block}
+}
 </style></head><body>
 <div id="acct"></div>
 <main>
-<picture><source srcset="assets/etingi-logo.webp" type="image/webp"><img class="logo" src="assets/etingi-logo.jpg" width="1024" height="687" alt="Etingi – Games That Challenge"></picture>
+<div class="hero" id="hero">
+<video id="intro" class="intro" autoplay muted playsinline webkit-playsinline preload="auto" poster="assets/etingi-logo.jpg" width="752" height="416" disablepictureinpicture aria-label="Etingi – Games That Challenge">
+<source src="assets/etingi-intro.mp4" type="video/mp4">
+<source src="assets/etingi-intro.webm" type="video/webm">
+</video>
+<picture class="logo-static" id="logo-static">
+<source srcset="assets/etingi-logo.webp" type="image/webp">
+<img class="logo" src="assets/etingi-logo.jpg" width="1024" height="687" alt="Etingi – Games That Challenge">
+</picture>
+</div>
 <a class="play" href="games.html">Let's Play</a>
 <p class="note">Free to play · sign in to save progress</p>
 </main>
-<script>try{if(window.EtingiAuth&&EtingiAuth.mountMenu)EtingiAuth.mountMenu('#acct');else if(window.EtingiAuth&&EtingiAuth.mount)EtingiAuth.mount(document.getElementById('acct'));}catch(e){}</script>
+<script>
+try{if(window.EtingiAuth&&EtingiAuth.mountMenu)EtingiAuth.mountMenu('#acct');else if(window.EtingiAuth&&EtingiAuth.mount)EtingiAuth.mount(document.getElementById('acct'));}catch(e){}
+(function(){
+  var hero=document.getElementById('hero');
+  var v=document.getElementById('intro');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function showStatic(){
+    if(hero)hero.classList.add('is-static');
+    if(v){try{v.pause();}catch(e){}v.removeAttribute('autoplay');v.setAttribute('aria-hidden','true');}
+  }
+  if(reduce||!v){showStatic();return;}
+  v.addEventListener('error',showStatic);
+  var started=false;
+  v.addEventListener('playing',function(){started=true;});
+  var p=v.play();
+  if(p&&p.then)p.catch(showStatic);
+  setTimeout(function(){if(!started&&v.paused)showStatic();},2500);
+})();
+</script>
 <footer style="text-align:center;padding:24px 12px;opacity:.75;font:14px system-ui,sans-serif">Created by AD Walker Builds</footer>
 </body></html>
